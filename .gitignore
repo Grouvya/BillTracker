@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Installers (don't commit built installers)
+Billtracker_qt_Installer.exe
+*.dmg
+*.AppImage
+*.tar.gz
+appimagetool-x86_64.AppImage
+
+# macOS
+.DS_Store
+*.icns
+billtracker.iconset/
+
+# Linux
+*.AppDir/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+desktop.ini
