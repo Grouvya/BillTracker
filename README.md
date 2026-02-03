@@ -167,6 +167,116 @@ A modern, secure cross-platform application for tracking bills, managing budgets
 
 ---
 
+## 🛠️ Building from Source
+
+Want to build the app yourself? Here's how to compile BillTracker on your system:
+
+### Prerequisites (All Platforms)
+- **Python 3.11+**
+- **Git** (to clone the repository)
+
+### Windows Build
+
+```powershell
+# Clone the repository
+git clone https://github.com/Grouvya/billtracker.git
+cd billtracker
+
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+pip install pyinstaller
+
+# Build executable
+pyinstaller Billtracker_qt.spec --clean --noconfirm
+
+# Executable will be in: dist\Billtracker_qt.exe
+```
+
+**Optional: Create installer**
+```powershell
+# Install NSIS (if not already installed)
+choco install nsis -y
+
+# Build installer
+makensis Billtracker_qt_installer.nsi
+
+# Installer will be: Billtracker_qt_Installer.exe
+```
+
+### macOS Build
+
+```bash
+# Clone the repository
+git clone https://github.com/Grouvya/billtracker.git
+cd billtracker
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+pip install pyinstaller
+
+# Install DMG creation tool
+brew install create-dmg
+
+# Make build script executable and run it
+chmod +x build_macos.sh
+./build_macos.sh
+
+# App bundle: dist/Billtracker_qt.app
+# DMG installer: dist/BillTracker-5.5.0-macOS.dmg
+```
+
+### Linux Build
+
+```bash
+# Clone the repository
+git clone https://github.com/Grouvya/billtracker.git
+cd billtracker
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install system dependencies (Ubuntu/Debian)
+sudo apt-get update
+sudo apt-get install -y libxcb-xinerama0 libxcb-cursor0 libxkbcommon-x11-0 \
+    libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+    libxcb-render-util0 libxcb-shape0 fuse libfuse2
+
+# Install Python dependencies
+pip install -r requirements.txt
+pip install pyinstaller
+
+# Make build script executable and run it
+chmod +x build_linux.sh
+./build_linux.sh
+
+# AppImage: dist/BillTracker-5.5.0-x86_64.AppImage
+# Tarball: dist/BillTracker-5.5.0-linux-x86_64.tar.gz
+```
+
+**For other Linux distributions:**
+- **Fedora/RHEL**: Replace `apt-get` with `dnf` or `yum`
+- **Arch**: Replace `apt-get` with `pacman`
+
+### Running Without Building
+
+If you just want to run the app without creating an installer:
+
+```bash
+# After installing dependencies
+python Billtracker_qt.py
+```
+
+---
+
 ## 🔧 Technical Details
 
 ### Built With
