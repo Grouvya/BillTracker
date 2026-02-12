@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Version 7.1.12 (Final Stability Hotfix)
+# Version 7.1.14 (Dynamic Currency & Donate Button)
 # To run: pip install PyQt6 cryptography
 
-__version__ = '7.1.12'
+__version__ = '7.1.14'
 
 import sys
 import os
@@ -84,6 +84,7 @@ TRANSLATIONS = {
         "converter_button": "Converter",
         "clear_data_button": "Clear Data",
         "btn_contact": "📩 Contact",
+        "btn_donate": "💳 Donate",
         "refresh_rates_button": "Refresh Rates",
         "settings_button": "Settings",
         "unpaid_bills_title": "Unpaid Bills",
@@ -252,6 +253,7 @@ TRANSLATIONS = {
         "title_no_history": "No History",
         "msg_no_history": "No paid bills found.",
         "btn_contact": "📩 Contact",
+        "btn_donate": "💳 Donate",
         "credits_link": "✨ Created by Grouvya! ✨",
         "btn_search": "🔍 Search Bills",
         "title_search": "Search Bills",
@@ -393,6 +395,7 @@ TRANSLATIONS = {
         "converter_button": "კონვერტერი",
         "clear_data_button": "მონაცემების წაშლა",
         "btn_contact": "📩 კონტაქტი",
+        "btn_donate": "💳 დონაცია",
         "refresh_rates_button": "კურსების განახლება",
         "settings_button": "პარამეტრები",
         "unpaid_bills_title": "გადასახდელი ბილეთები",
@@ -559,6 +562,7 @@ TRANSLATIONS = {
         "title_no_history": "ისტორია ცარიელია",
         "msg_no_history": "გადახდილი გადასახადები ვერ მოიძებნა.",
         "btn_contact": "📩 კონტაქტი",
+        "btn_donate": "💳 დონაცია",
         "credits_link": "✨ შექმნილია Grouvya-ს მიერ! ✨",
         "btn_search": "🔍 ძებნა",
         "title_search": "გადასახადების ძებნა",
@@ -5690,7 +5694,10 @@ class BillTrackerWindow(QMainWindow):
             self.update_display()
 
     def open_contact(self):
-        webbrowser.open("https://guns.lol/grouvya")
+        webbrowser.open("https://t.me/ofinilet")
+
+    def open_donate(self):
+        webbrowser.open("https://revolut.me/grouvya")
 
     def export_csv(self):
         """Export data to CSV."""
@@ -5986,7 +5993,9 @@ class BillTrackerWindow(QMainWindow):
         self.about_scroll.setWidget(self.about_text_widget)
         layout.addWidget(self.about_scroll)
         
-        # Contact Button at the bottom
+        # Buttons Row
+        btn_row = QHBoxLayout()
+        
         self.contact_btn = QPushButton(STRINGS["btn_contact"])
         self.contact_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.contact_btn.setStyleSheet("""
@@ -6003,7 +6012,27 @@ class BillTrackerWindow(QMainWindow):
             }
         """)
         self.contact_btn.clicked.connect(self.open_contact)
-        layout.addWidget(self.contact_btn)
+        btn_row.addWidget(self.contact_btn)
+        
+        self.donate_btn = QPushButton(STRINGS["btn_donate"])
+        self.donate_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.donate_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ff006e; 
+                color: white; 
+                font-weight: bold;
+                padding: 10px;
+                font-size: 11pt;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #ff5c8d;
+            }
+        """)
+        self.donate_btn.clicked.connect(self.open_donate)
+        btn_row.addWidget(self.donate_btn)
+        
+        layout.addLayout(btn_row)
 
 
     def _on_tab_changed(self, index):
