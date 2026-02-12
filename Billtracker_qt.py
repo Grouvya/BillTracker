@@ -4548,7 +4548,8 @@ class SearchDialog(QDialog):
         # Display results
         self.results_table.setRowCount(len(results))
         for i, (bill, status) in enumerate(results):
-            symbol = self.currencies.get(bill['currency'], '$')
+            symbol_data = self.currencies.get(bill['currency'], '$')
+            symbol = symbol_data.get('symbol', '$') if isinstance(symbol_data, dict) else symbol_data
             
             name_item = QTableWidgetItem(bill['name'])
             amount_item = QTableWidgetItem(f"{symbol}{bill['amount']:,.2f}")
@@ -4627,7 +4628,8 @@ class SearchDialog(QDialog):
         if not bill:
             return
         
-        symbol = self.currencies.get(bill['currency'], '$')
+        symbol_data = self.currencies.get(bill['currency'], '$')
+        symbol = symbol_data.get('symbol', '$') if isinstance(symbol_data, dict) else symbol_data
         details = f"""
 {STRINGS["header_name"]}: {bill['name']}
 {STRINGS["header_amount"]}: {symbol}{bill['amount']:,.2f}
