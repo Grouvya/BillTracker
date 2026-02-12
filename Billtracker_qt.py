@@ -1141,8 +1141,12 @@ class DataManager:
 
                 data = json.loads(content)
                 if not isinstance(data, dict):
+                    print(f"DEBUG: Data loaded from '{self.data_file}' is not a dict: {type(data)}", flush=True)
                     return {}
                     
+                print(f"DEBUG: Data loaded successfully. Keys: {list(data.keys())}", flush=True)
+                print(f"DEBUG: Raw Currency Data in File: Budget='{data.get('budget_currency')}', Bill='{data.get('bill_currency')}', Summary='{data.get('summary_currency')}'", flush=True)
+                
                 # Schema validation (rest of the logic remains same)
                 safe_data = {}
                 safe_data['budget'] = float(data.get('budget', 0.0))
@@ -5005,8 +5009,8 @@ class BillTrackerWindow(QMainWindow):
                 self.idle_timeout_minutes = 5
             
             # Connect combo boxes
-            self.budget_currency_combo.currentTextChanged.connect(self.update_display)
-            self.summary_currency_combo.currentTextChanged.connect(self.update_display)
+            self.budget_currency_combo.currentTextChanged.connect(self.on_currency_changed)
+            self.summary_currency_combo.currentTextChanged.connect(self.on_currency_changed)
 
             # Restore last used currencies
             self.restore_currency_preferences()
@@ -5139,6 +5143,7 @@ class BillTrackerWindow(QMainWindow):
         add_bill_layout.addWidget(QLabel(STRINGS["currency_label"] + ":"), 2, 0)
         curr_layout = QHBoxLayout()
         self.bill_currency_combo = LazyCombo(items_provider=self.get_filtered_currency_list, pending_text=None)
+        self.bill_currency_combo.currentTextChanged.connect(self.on_currency_changed)
         curr_layout.addWidget(self.bill_currency_combo)
         curr_search_btn = QPushButton("🔍")
         curr_search_btn.setFixedWidth(40)
@@ -5364,7 +5369,14 @@ class BillTrackerWindow(QMainWindow):
     def restore_currency_preferences(self):
         """Restore last used currency selections from saved data."""
         try:
-            data = self.data_manager.load_data()
+            # Block signals to prevent "on_currency_changed" from triggering saves 
+            # while we are still restoring the state. This prevents partial data overwrites.
+            self.budget_currency_combo.blockSignals(True)
+            self.bill_currency_combo.blockSignals(True)
+            self.summary_currency_combo.blockSignals(True)
+            
+            # CRITICAL FIX: Pass session_pin to decrypt data correctly!
+            data = self.data_manager.load_data(self.session_pin)
             budget_curr = data.get('budget_currency')
             bill_curr = data.get('bill_currency')
             summary_curr = data.get('summary_currency')
@@ -5372,20 +5384,45 @@ class BillTrackerWindow(QMainWindow):
             # Helper to match old format "$ (USD)" or new format "$ - US Dollar" to modern key
             def find_display_key(saved_str):
                 if not saved_str: return None
-                # If it's already a modern key
-                if saved_str in self.currencies: return saved_str
-                # Try to extract code from old format "$ (USD)"
+                
+                # 1. Exact match
+                if saved_str in self.currencies: 
+                    return saved_str
+                
+                # 2. Try to extract code from old format "$ (USD)"
                 import re
                 match = re.search(r'\((.*?)\)', saved_str)
-                code = match.group(1) if match else saved_str
-                # Find modern key by code
+                if match:
+                    code = match.group(1)
+                    for key, meta in self.currencies.items():
+                        if meta['code'] == code: return key
+                        
+                # 3. Fallback: Search by Symbol in currencies metadata
+                # 4. Fallback: Check if saved_str matches any 'code' directly (e.g. "USD")
                 for key, meta in self.currencies.items():
-                    if meta['code'] == code:
+                    # If saved string is exactly the code "USD"
+                    if saved_str == meta['code']:
                         return key
+                        
+                    # If saved string contains the name? "British Pound" in "British Pound Sterling"
+                    # Only do this if we are desperate.
+                    
+                # 5. Fuzzy match for cases like "British Pound" vs "British Pound Sterling"
+                # If saved_str is in the KEY (ignoring symbol prefix)
+                for key in self.currencies:
+                    # key is "£ - British Pound Sterling"
+                    # saved_str is "British Pound" or "£ - British Pound"
+                    if saved_str in key:
+                        return key
+                        
                 return None
 
             b_key = find_display_key(budget_curr)
-            if b_key: self.budget_currency_combo.setCurrentText(b_key)
+            if b_key: 
+                print(f"DEBUG: restore found key '{b_key}' for budget. Setting...", flush=True)
+                self.budget_currency_combo.setCurrentText(b_key)
+            else:
+                 print(f"DEBUG: restore FAILED to match budget '{budget_curr}'", flush=True)
             
             bl_key = find_display_key(bill_curr)
             if bl_key: self.bill_currency_combo.setCurrentText(bl_key)
@@ -5393,8 +5430,22 @@ class BillTrackerWindow(QMainWindow):
             s_key = find_display_key(summary_curr)
             if s_key: self.summary_currency_combo.setCurrentText(s_key)
             
-        except:
+        except Exception as e:
+            print(f"DEBUG: restore exception: {e}", flush=True)
             pass
+        finally:
+            print("DEBUG: restore returning signals to normal", flush=True)
+            self.budget_currency_combo.blockSignals(False)
+            self.bill_currency_combo.blockSignals(False)
+            self.summary_currency_combo.blockSignals(False)
+            # Ensure display is updated with restored values
+            self.update_display()
+    
+    def on_currency_changed(self):
+        """Handle currency changes from any combo box."""
+        print(f"DEBUG: on_currency_changed triggered from UI. Current Budget Text: '{self.budget_currency_combo.currentText()}'", flush=True)
+        self.update_display()
+        self.save_data()
     
     def open_currency_search(self, combo_box):
         """Open searchable currency selector for a combo box (Dashboard)."""
@@ -6065,6 +6116,12 @@ class BillTrackerWindow(QMainWindow):
         if hasattr(self, 'calendar_tab'):
             self.calendar_tab.refresh_data()
 
+
+
+    def on_currency_changed(self):
+        """Handle currency changes from any combo box."""
+        self.update_display()
+        self.save_data()
 
 
     def update_display(self):
