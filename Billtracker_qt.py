@@ -5034,33 +5034,77 @@ class BillTrackerWindow(QMainWindow):
             self.setUpdatesEnabled(True)
 
     def get_filtered_currency_list(self):
-        """Returns a filtered list of currency display strings (Popular + In Use)."""
+        """Returns a dynamic list of currencies based on usage frequency (Top 5 + Active)."""
         all_display_keys = sorted(self.currencies.keys())
         
-        # Get codes from current bills to ensure they are always present
-        used_codes = set()
-        for b in self.unpaid_bills + self.paid_bills:
-            if 'currency' in b:
-                used_codes.add(b['currency'])
+        # 1. Calculate Frequency
+        frequency = {}
         
-        # Include savings goals currencies (v6.7.2)
+        # Helper to count
+        def add_count(curr_str):
+            if not curr_str: return
+            frequency[curr_str] = frequency.get(curr_str, 0) + 1
+            
+        # Scan Bills
+        for b in self.unpaid_bills + self.paid_bills:
+            add_count(b.get('currency'))
+            
+        # Scan Savings Goals
         if hasattr(self, 'savings_goals'):
             for g in self.savings_goals:
-                used_codes.add(g.get('currency', 'USD'))
+                add_count(g.get('currency'))
+                
+        # 2. Identify Currently Active Currencies (Must always be present)
+        active_currencies = set()
         
-        # Strictly major/requested codes for the quick dropdown
-        major_codes = ['USD', 'EUR', 'GEL', 'GBP', 'TRY']
+        # Budget
+        if hasattr(self, 'budget_currency_combo'):
+            active_currencies.add(self.budget_currency_combo.currentText())
+            
+        # Summary
+        if hasattr(self, 'summary_currency_combo'):
+            active_currencies.add(self.summary_currency_combo.currentText())
+            
+        # Bill (if we are in context of adding a bill, we might want to preserve its current state)
+        if hasattr(self, 'bill_currency_combo'):
+            active_currencies.add(self.bill_currency_combo.currentText())
+            
+        # 3. Sort by Frequency
+        # Sort keys by count descending
+        sorted_by_usage = sorted(frequency.keys(), key=lambda k: frequency[k], reverse=True)
         
-        filtered = []
-        for display_key in all_display_keys:
-            meta = self.currencies.get(display_key)
-            if not meta: continue
-            code = meta['code']
-            if code in major_codes or code in used_codes:
-                filtered.append(display_key)
+        # Take Top 5
+        top_5 = sorted_by_usage[:5]
         
-        # Fallback if filtering fails or list is empty
-        return filtered if filtered else all_display_keys
+        # 4. Construct Final List
+        # Start with a base set of Top 5 + Active
+        final_set = set(top_5)
+        final_set.update(active_currencies)
+        
+        # 5. Fallback/Cold Start
+        # If user has almost no data (e.g. < 2 currencies used/active), add some majors to prompt them.
+        if len(final_set) < 2:
+            default_majors = []
+            # Find display keys for USD, EUR, GBP
+            # We iterate all keys to find matches if we only know code
+            needed_codes = ['USD', 'EUR', 'GBP']
+            for k, meta in self.currencies.items():
+                if meta['code'] in needed_codes:
+                    default_majors.append(k)
+            final_set.update(default_majors)
+            
+        # Filter None or empty
+        final_set = {x for x in final_set if x}
+        
+        # Return sorted list (alphabetical for UI consistency within the short list? 
+        # Or frequency? Usually dropdowns are alphabetical or frequency. 
+        # User asked for "most frequent". But for a list of ~5 items, maybe frequency order is best?
+        # Actually, let's sort by frequency order (Active/Top ones first) or just standard sort.
+        # "Preferred Currencies" usually implies a set. 
+        # Let's return them in the order: [Active] + [Top Frequent] + [Others if any]
+        # But `sorted` is safest for UI prediction.
+        # Let's sticking to alphabetical for the dropdown result to make it easy to scan.
+        return sorted(list(final_set))
 
     def setup_dashboard_tab(self):
         layout = QVBoxLayout()
