@@ -1,6 +1,6 @@
 # 💰 BillTracker - The Premium Financial Hub
 
-**Version 7.1.12** | Created with ❤️ by **Grouvya**
+**Version 7.1.14** | Created with ❤️ by **Grouvya**
 
 A modern, high-performance financial management ecosystem. Streamline your bills, automate your subscriptions, and crush your savings goals—all from a single, secure, and beautiful interface.
 
@@ -96,10 +96,11 @@ python3 Billtracker_qt.py
 
 ---
 
-## 🚀 Recent Updates (v7.1.12)
-- **Stability**: Resolved `NoneType` issues in `PinEntryDialog` and `SettingsDialog`.
-- **Startup Fixes**: Fixed crash issues when PIN security was active at launch.
-- **Theme Engine**: Improved robustness of the theme manager during complex startup sequences.
+## 🚀 Recent Updates (v7.1.14)
+- **Top 5 Currencies**: Dynamic suggestions based on your bill and savings goal usage.
+- **Donate Option**: Added easy access to Revolut donations in the About section.
+- **Contact Update**: Direct Telegram support integration.
+- **Persistence**: Fixed currency preference restoration for encrypted storage.
 
 ---
 
