@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Version 7.1.14 (Dynamic Currency & Donate Button)
+# Version 7.1.15 (Documentation & Guide Update)
 # To run: pip install PyQt6 cryptography
 
-__version__ = '7.1.14'
+__version__ = '7.1.15'
 
 import sys
 import os
