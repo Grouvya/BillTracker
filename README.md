@@ -1,6 +1,6 @@
 # 💰 BillTracker - The Premium Financial Hub
 
-**Version 7.1.14** | Created with ❤️ by **Grouvya**
+Created with ❤️ by **Grouvya**
 
 A modern, high-performance financial management ecosystem. Streamline your bills, automate your subscriptions, and crush your savings goals—all from a single, secure, and beautiful interface.
 
@@ -108,3 +108,4 @@ python3 Billtracker_qt.py
 Dedicated to providing the best personal finance tool. For feedback, feature requests, or support, use the **📩 Contact** button inside the app's About tab.
 
 **Thank you for choosing BillTracker!** 🎉
+
