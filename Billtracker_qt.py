@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Version 7.2.0 (Security & Georgian Localization)
+# Version 7.3.0 (Security & Georgian Localization)
 # To run: pip install PyQt6 cryptography
 
-__version__ = '7.2.0'
+__version__ = '7.3.0'
 
 import sys
 import os
