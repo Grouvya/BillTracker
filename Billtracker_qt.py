@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Version 7.1.15 (Documentation & Guide Update)
+# Version 7.2.0 (Security & Georgian Localization)
 # To run: pip install PyQt6 cryptography
 
-__version__ = '7.1.15'
+__version__ = '7.2.0'
 
 import sys
 import os
@@ -143,6 +143,12 @@ TRANSLATIONS = {
         "tab_paid": "Paid History",
         "chart_budget_title": "Budget vs Expenses",
         "chart_category_title": "Spending by Category",
+        "lbl_yearly": "Yearly",
+        "title_invalid_path": "Invalid Path",
+        "msg_invalid_path_security": "For security reasons, data files must be stored in your user directory.\nSystem directories are not allowed.",
+        "msg_csv_read_failed": "Failed to read CSV: {}",
+        "title_permission_denied": "Permission Denied",
+        "msg_admin_rights_required": "Administrator rights required to modify startup settings.",
         "notification_title": "Bills Due Soon",
         "notification_msg": "You have {} bills due today or tomorrow!",
         "lang_restart_msg": "Language changed. Please restart the application to apply changes.",
@@ -194,12 +200,11 @@ TRANSLATIONS = {
         "tab_about": "ℹ️ About",
         "title_quick_status": "Quick Status",
         "btn_export_csv": "📂 Export CSV",
-        "btn_export_pdf": "📄 Export PDF Report",
+        "btn_export_pdf": "📄 Export PDF",
         "title_save_report": "Save PDF Report",
         "msg_report_generated": "PDF Report generated successfully!",
         "msg_report_created": "Report saved to {}",
         "msg_report_failed": "Failed to generate PDF report. Check logs.",
-        "btn_export_pdf": "📄 Export PDF",
         "group_support_data": "Support & Data",
         "group_quick_status": "Quick Status",
         "label_filter_category": "Filter by Category:",
@@ -215,6 +220,11 @@ TRANSLATIONS = {
         "msg_bill_name_long": "Bill name is too long (max 100 chars).",
         "msg_amount_large": "Amount is too large.",
         "msg_invalid_format": "Invalid input format.",
+        "msg_data_restored_reload": "Data restored successfully. Reloading...",
+        "msg_data_tampered": "Data Integrity Violation!\n\nThe data file has been modified externally.\nThis could be due to tampering or corruption.\n\nDo you want to restore from the last automatic backup?",
+        "title_invalid_pin": "Invalid PIN",
+        "msg_pin_too_short": "PIN must be at least 4 digits.",
+        "msg_pin_set_enabled": "PIN has been set and enabled.",
         "title_recurring_created": "Recurring Bill Created",
         "msg_recurring_created": "Next {} due on {}",
         "title_export_success": "Export Successful",
@@ -275,6 +285,12 @@ TRANSLATIONS = {
         "label_pin_unlock": "Enter PIN to unlock:",
         "label_pin_set_new": "Set new 4-6 digit PIN:",
         "btn_unlock": "Unlock",
+        "label_confirm_pin": "Confirm PIN:",
+        "placeholder_confirm_pin": "****",
+        "label_pin_hint_setup": "PIN Hint (optional):",
+        "placeholder_hint": "e.g., birthday, year...",
+        "msg_pins_dont_match": "PINs do not match. Please try again.",
+        "msg_pin_hint_prefix": "Hint: {}",
         "btn_save_pin": "Save PIN",
         "group_security_pin": "Security (PIN Protection)",
         "chk_enable_pin": "Enable PIN Protection",
@@ -351,6 +367,18 @@ TRANSLATIONS = {
         "title_mini_mode": "Mini Tracker",
         "lbl_budget_rem": "Remaining Budget:",
         "lbl_due_today": "Due Today:",
+        "lbl_overdue": "Overdue",
+        "lbl_total_saved": "Total Saved:",
+        "lbl_no_file_selected": "No file selected",
+        "lbl_preview_top_5": "Preview (Top 5 lines):",
+        "lbl_cloud_sync_desc": "App will automatically save an encrypted copy for syncing.",
+        "btn_pick_color": "Pick Custom Color",
+        "group_column_mapping": "Column Mapping",
+        "group_general_settings": "General Settings",
+        "group_aesthetics": "Aesthetics",
+        "group_cloud_sync": "Cloud Sync",
+        "title_language_selection": "Language Selection",
+        "title_security_alert": "Security Alert",
         "btn_full_mode": "Full App",
         "group_notif_settings": "Notification Settings",
         "chk_enable_webhooks": "Enable Webhook Notifications",
@@ -454,6 +482,12 @@ TRANSLATIONS = {
         "tab_paid": "ისტორია",
         "chart_budget_title": "ბიუჯეტი vs ხარჯები",
         "chart_category_title": "ხარჯები კატეგორიების მიხედვით",
+        "lbl_yearly": "წლიური",
+        "title_invalid_path": "არასწორი მისამართი",
+        "msg_invalid_path_security": "უსაფრთხოების მიზნით, ფაილები უნდა შეინახოს მომხმარებლის საქაღალდეში.\nსისტემური საქაღალდეები აკრძალულია.",
+        "msg_csv_read_failed": "CSV-ს ჩატვირთვა ვერ მოხერხდა: {}",
+        "title_permission_denied": "წვდომა აკრძალულია",
+        "msg_admin_rights_required": "საჭიროა ადმინისტრატორის უფლებები პარამეტრების შესაცვლელად.",
         "notification_title": "მოახლოებული გადასახადები",
         "notification_msg": "თქვენ გაქვთ {} გადასახადი დღეს ან ხვალ!",
         "lang_restart_msg": "ენა შეიცვალა. ცვლილებების ასახვისთვის გთხოვთ გადატვირთოთ პროგრამა.",
@@ -524,6 +558,11 @@ TRANSLATIONS = {
         "msg_bill_name_long": "დასახელება ძალიან გრძელია (მაქს. 100 სიმბოლო).",
         "msg_amount_large": "თანხა ძალიან დიდია.",
         "msg_invalid_format": "არასწორი ფორმატი.",
+        "msg_data_restored_reload": "მონაცემები აღდგენილია. ჩატვირთვა...",
+        "msg_data_tampered": "მონაცემების ვერიფიკაცია ვერ მოხერხდა!\n\nფაილი გარედან არის შეცვლილი.\nგსურთ ბოლო არქივის აღდგენა?",
+        "title_invalid_pin": "არასწორი PIN",
+        "msg_pin_too_short": "PIN უნდა იყოს მინიმუმ 4 ციფრიანი.",
+        "msg_pin_set_enabled": "PIN დაყენებული და გააქტიურებულია.",
         "title_recurring_created": "განმეორებადი გადასახადი შეიქმნა",
         "msg_recurring_created": "შემდეგი გადასახადი {} იქნება {} -ში",
         "title_export_success": "ექსპორტი წარმატებულია",
@@ -581,8 +620,14 @@ TRANSLATIONS = {
         "placeholder_new_category": "ახალი კატეგორიის სახელი",
         "btn_add": "დამატება",
         "btn_remove": "წაშლა",
-        "label_pin_unlock": "შეიყვანეთ PIN კოდი:",
-        "label_pin_set_new": "დააყენეთ ახალი 4-6 ციფრიანი PIN:",
+        "label_pin_unlock": "PIN კოდის შეყვანა:",
+        "label_pin_set_new": "შეიყვანეთ ახალი 4-6 ციფრიანი PIN:",
+        "label_confirm_pin": "დაადასტურეთ PIN:",
+        "placeholder_confirm_pin": "****",
+        "label_pin_hint_setup": "PIN მინიშნება (არასავალდებულო):",
+        "placeholder_hint": "მაგ: დაბადების წელი...",
+        "msg_pins_dont_match": "PIN კოდები არ ემთხვევა. სცადეთ თავიდან.",
+        "msg_pin_hint_prefix": "მინიშნება: {}",
         "btn_unlock": "განბლოკვა",
         "btn_save_pin": "PIN-ის შენახვა",
         "group_security_pin": "უსაფრთხოება (PIN დაცვა)",
@@ -653,7 +698,7 @@ TRANSLATIONS = {
         "msg_confirm_batch_delete": "დარწმუნებული ხართ რომ გსურთ {} არქივის წაშლა?",
         # v6.2.0 Strings
         "tab_notifications": "შეტყობინებები",
-        "lbl_webhook_url": "Webhook URL (Discord/Slack/Telegram)",
+        "lbl_webhook_url": "Webhook-ის მისამართი (Discord/Slack/Telegram)",
         "lbl_reminder_time": "ყოველდღიური შეხსენება",
         "btn_test_webhook": "ტესტირება",
         "msg_webhook_test_sent": "სატესტო შეტყობინება გაიგზავნა!",
@@ -662,6 +707,18 @@ TRANSLATIONS = {
         "title_mini_mode": "მინი ტრეკერი",
         "lbl_budget_rem": "დარჩენილი ბიუჯეტი:",
         "lbl_due_today": "დღეს გადასახდელი:",
+        "lbl_overdue": "ვადაგადაცილებული",
+        "lbl_total_saved": "სულ დაზოგილი:",
+        "lbl_no_file_selected": "ფაილი არ არის არჩეული",
+        "lbl_preview_top_5": "გადახედვა (ზედა 5 ხაზი):",
+        "lbl_cloud_sync_desc": "აპლიკაცია ავტომატურად შეინახავს დაშიფრულ ასლს სინქრონიზაციისთვის.",
+        "btn_pick_color": "ფერის არჩევა",
+        "group_column_mapping": "სვეტების შესაბამისობა",
+        "group_general_settings": "ზოგადი პარამეტრები",
+        "group_aesthetics": "ვიზუალი",
+        "group_cloud_sync": "ღრუბლოვანი სინქრონიზაცია",
+        "title_language_selection": "ენის არჩევა",
+        "title_security_alert": "უსაფრთხოების გაფრთხილება",
         "btn_full_mode": "აპლიკაცია",
         "group_notif_settings": "შეტყობინებების პარამეტრები",
         "chk_enable_webhooks": "Webhook შეტყობინებების ჩართვა",
@@ -713,23 +770,7 @@ class SafeStrings:
         except Exception:
             return default or f"[{key}]"
 
-def sanitize_input(text):
-    """Strip potentially dangerous or invisible characters."""
-    if not isinstance(text, str):
-        return ""
-    # Remove control characters and limit length
-    cleaned = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
-    return cleaned[:500].strip()
 
-def validate_file_path(path):
-    """Basic security check for file paths."""
-    if not path: return False
-    # Don't allow system directories or paths that looks suspicious
-    suspicious = ['Windows', 'System32', 'Program Files', '/etc/', '/bin/']
-    for s in suspicious:
-        if s.lower() in path.lower():
-            return False
-    return True
 
 def strict_float(value):
     """Convert value to float, handling comma/dot and other common issues."""
@@ -1914,19 +1955,30 @@ class ToastNotification(QDialog):
 
 class PinEntryDialog(QDialog):
     """Dialog for entering the PIN to unlock the application."""
-    def __init__(self, parent=None, mode='verify', can_minimize=False):
+    def __init__(self, parent=None, mode='verify', can_minimize=False, hint=None):
         super().__init__(parent)
         self.mode = mode # 'verify', 'set'
         self.can_minimize = can_minimize
-        self.setWindowTitle(STRINGS["title_secure_access"])
-        self.setFixedSize(300, 150)
+        self.hint = hint
+        
+        self.setWindowTitle(STRINGS["msg_app_locked"] if mode == 'verify' else STRINGS["group_security_pin"])
+        self.setFixedSize(350, 450) if mode == 'set' else self.setFixedSize(350, 300)
+        
+        # Get theme manager from parent or singleton
         theme_manager = None
-        if hasattr(self.parent(), 'theme_manager'):
-            theme_manager = self.parent().theme_manager
+        if parent and hasattr(parent, 'theme_manager'):
+            theme_manager = parent.theme_manager
+        elif parent and parent.parent() and hasattr(parent.parent(), 'theme_manager'):
+            theme_manager = parent.parent().theme_manager
+        else:
+            # Global fallback or finding it from main window
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, QMainWindow) and hasattr(widget, 'theme_manager'):
+                    theme_manager = widget.theme_manager
+                    break
         
         if not theme_manager:
-            # Fallback if parent access fails
-            from __main__ import ThemeManager 
+            from Billtracker_qt import ThemeManager
             theme_manager = ThemeManager()
             
         p = theme_manager.get_palette()
@@ -1947,9 +1999,40 @@ class PinEntryDialog(QDialog):
         self.pin_input.setStyleSheet(f"font-size: 18pt; padding: 5px; border-radius: 5px; background: {p['surface']}; color: {p['text']}; border: 1px solid {p['border']};")
         layout.addWidget(self.pin_input)
         
+        if mode == 'set':
+            # Confirm PIN
+            self.confirm_label = QLabel(STRINGS["label_confirm_pin"])
+            self.confirm_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(self.confirm_label)
+            
+            self.confirm_pin_input = QLineEdit()
+            self.confirm_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
+            self.confirm_pin_input.setMaxLength(6)
+            self.confirm_pin_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.confirm_pin_input.setPlaceholderText(STRINGS["placeholder_confirm_pin"])
+            self.confirm_pin_input.setStyleSheet(f"font-size: 18pt; padding: 5px; border-radius: 5px; background: {p['surface']}; color: {p['text']}; border: 1px solid {p['border']};")
+            layout.addWidget(self.confirm_pin_input)
+            
+            # PIN Hint
+            self.hint_setup_label = QLabel(STRINGS["label_pin_hint_setup"])
+            self.hint_setup_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(self.hint_setup_label)
+            
+            self.hint_input = QLineEdit()
+            self.hint_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.hint_input.setPlaceholderText(STRINGS["placeholder_hint"])
+            self.hint_input.setStyleSheet(f"padding: 8px; border-radius: 5px; background: {p['surface']}; color: {p['text']}; border: 1px solid {p['border']};")
+            layout.addWidget(self.hint_input)
+            
+        elif mode == 'verify' and self.hint:
+            self.hint_display = QLabel(STRINGS["msg_pin_hint_prefix"].format(self.hint))
+            self.hint_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.hint_display.setStyleSheet("font-style: italic; color: gray;")
+            layout.addWidget(self.hint_display)
+
         btn_layout = QHBoxLayout()
         self.ok_btn = QPushButton(STRINGS["btn_unlock"] if mode == 'verify' else STRINGS["btn_save_pin"])
-        self.ok_btn.clicked.connect(self.accept)
+        self.ok_btn.clicked.connect(self.handle_accept)
         self.ok_btn.setDefault(True)
         accent = theme_manager.accent_color
         contrast = theme_manager.get_contrast_color(accent)
@@ -1961,68 +2044,37 @@ class PinEntryDialog(QDialog):
             self.cancel_btn.clicked.connect(self.reject)
             self.cancel_btn.setStyleSheet(f"background-color: {p['surface']}; color: {p['text']}; padding: 8px; border-radius: 4px; border: 1px solid {p['border']};")
             btn_layout.addWidget(self.cancel_btn)
-        else:
-            # Recovery Option: Factory Reset
-            self.reset_btn = QPushButton(STRINGS["btn_reset_app"])
-            self.reset_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus) # Don't accidentally tab to it
-            self.reset_btn.clicked.connect(self.handle_reset)
-            self.reset_btn.setStyleSheet(f"background-color: transparent; color: {p['danger']}; padding: 8px; border: none; text-decoration: underline;")
-            btn_layout.addWidget(self.reset_btn)
+        
             
         layout.addLayout(btn_layout)
         self.setLayout(layout)
 
-    def handle_reset(self):
-        """Handle factory reset request from locked screen."""
-        warning = QMessageBox(self)
-        warning.setWindowTitle(STRINGS["title_reset_app"])
-        warning.setText(STRINGS["msg_reset_warning"])
-        warning.setIcon(QMessageBox.Icon.Warning)
-        warning.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        warning.setDefaultButton(QMessageBox.StandardButton.No)
-        
-        if warning.exec() == QMessageBox.StandardButton.Yes:
-            # Double confirmation
-            final_warn = QMessageBox(self)
-            final_warn.setWindowTitle(STRINGS["title_final_warning"])
-            final_warn.setText(STRINGS["msg_final_warning"])
-            final_warn.setIcon(QMessageBox.Icon.Critical)
-            final_warn.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+    def handle_accept(self):
+        """Custom accept logic to handle PIN matching."""
+        if self.mode == 'set':
+            pin = self.pin_input.text().strip()
+            confirm = self.confirm_pin_input.text().strip()
             
-            if final_warn.exec() == QMessageBox.StandardButton.Yes:
-                try:
-                    # Logic to delete data file explicitly (even if outside default dir)
-                    config_dir = os.path.join(os.path.expanduser('~'), '.bill_tracker')
-                    config_file = os.path.join(config_dir, 'config.json')
-                    
-                    data_file_to_delete = None
-                    if os.path.exists(config_file):
-                        try:
-                            with open(config_file, 'r', encoding='utf-8') as f:
-                                # Try to read config to find custom data path
-                                cfg = json.load(f)
-                                if 'data_file_path' in cfg:
-                                    data_file_to_delete = cfg['data_file_path']
-                        except:
-                            pass
-                    
-                    if data_file_to_delete and os.path.exists(data_file_to_delete):
-                        try:
-                            # Also delete custom data file integrity hash
-                            if os.path.exists(data_file_to_delete):
-                                os.remove(data_file_to_delete)
-                            if os.path.exists(data_file_to_delete + ".sha256"):
-                                os.remove(data_file_to_delete + ".sha256")
-                        except Exception as e:
-                            logging.error(f"Failed to delete custom data file: {e}")
+            if len(pin) < 4:
+                QMessageBox.warning(self, STRINGS["title_invalid_pin"], STRINGS["msg_pin_too_short"])
+                return
+                
+            if pin != confirm:
+                QMessageBox.warning(self, STRINGS["title_invalid_pin"], STRINGS["msg_pins_dont_match"])
+                return
+        
+        self.accept()
 
-                    if os.path.exists(config_dir):
-                        shutil.rmtree(config_dir)
-                    
-                    QMessageBox.information(self, STRINGS["title_reset_complete"], STRINGS["msg_reset_complete"])
-                    sys.exit(0)
-                except Exception as e:
-                    QMessageBox.critical(self, STRINGS["title_error"], STRINGS["msg_reset_error"].format(e))
+    def get_pin_hash(self):
+        pin = self.pin_input.text().strip()
+        if not pin or len(pin) < 4: return None
+        return hashlib.sha256(pin.encode()).hexdigest()
+
+    def get_pin_hint(self):
+        if self.mode == 'set' and hasattr(self, 'hint_input'):
+            return self.hint_input.text().strip()
+        return ""
+
 
     def closeEvent(self, event):
         if self.mode == 'verify' and self.can_minimize:
@@ -2457,7 +2509,7 @@ class SavingsGoalDialog(QDialog):
                 # Ensure it's in the list (v6.7.4)
                 if self.currency_combo.findText(selected) == -1:
                     self.currency_combo.addItem(selected)
-                self.currency_combo.setCurrentText(selected)
+                combo_box.setCurrentText(selected)
 
     def get_data(self):
         return {
@@ -2481,7 +2533,7 @@ class SavingsTab(QWidget):
         summary_group = QGroupBox(STRINGS["tab_savings"])
         summary_layout = QGridLayout()
         
-        self.total_saved_label = QLabel("Total Saved: $0.00")
+        self.total_saved_label = QLabel(f"{STRINGS['lbl_total_saved']} $0.00")
         p = self.main_window.theme_manager.get_palette()
         self.total_saved_label.setStyleSheet(f"font-size: 14pt; font-weight: bold; color: {p['success']};")
         summary_layout.addWidget(self.total_saved_label, 0, 0, 1, 2)
@@ -2840,7 +2892,7 @@ class MiniTrackerWidget(QWidget):
         container_layout.addWidget(self.budget_lbl)
         
         # Due today info
-        self.due_lbl = QLabel(self.STRINGS["lbl_due_today"] + " 0")
+        self.due_lbl = QLabel(f"{STRINGS['lbl_due_today']} 0")
         self.due_lbl.setWordWrap(True)
         self.due_lbl.setStyleSheet("background: transparent;")
         container_layout.addWidget(self.due_lbl)
@@ -2895,7 +2947,7 @@ class MiniTrackerWidget(QWidget):
         # Get bills due today
         today = date.today().strftime('%Y-%m-%d')
         due_today_count = sum(1 for b in self.main_window.unpaid_bills if b['due_date'] == today)
-        self.due_lbl.setText(f"{self.STRINGS['lbl_due_today']} {due_today_count}")
+        self.due_lbl.setText(f"{STRINGS['lbl_due_today']} {due_today_count}")
 
     def restore_main(self):
         if self.main_window:
@@ -2919,7 +2971,7 @@ class CSVImportDialog(QDialog):
         
         # File Selection
         file_layout = QHBoxLayout()
-        self.file_label = QLabel("No file selected")
+        self.file_label = QLabel(STRINGS["lbl_no_file_selected"])
         file_layout.addWidget(self.file_label)
         
         select_btn = QPushButton(STRINGS["btn_select_csv"])
@@ -2928,7 +2980,7 @@ class CSVImportDialog(QDialog):
         layout.addLayout(file_layout)
         
         # Mapping Group
-        self.mapping_group = QGroupBox("Column Mapping")
+        self.mapping_group = QGroupBox(STRINGS["group_column_mapping"])
         mapping_layout = QGridLayout()
         
         self.name_map = QComboBox()
@@ -2947,7 +2999,7 @@ class CSVImportDialog(QDialog):
         layout.addWidget(self.mapping_group)
         
         # Preview Table
-        layout.addWidget(QLabel("Preview (Top 5 lines):"))
+        layout.addWidget(QLabel(STRINGS["lbl_preview_top_5"]))
         self.preview_table = QTableWidget(5, 3)
         self.preview_table.setHorizontalHeaderLabels(["Name", "Amount", "Date"])
         self.preview_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -2991,7 +3043,7 @@ class CSVImportDialog(QDialog):
                         self.mapping_group.setEnabled(True)
                         self.update_preview()
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to read CSV: {e}")
+                QMessageBox.critical(self, STRINGS["title_error"], STRINGS["msg_csv_read_failed"].format(e))
 
     def update_preview(self):
         self.preview_table.setRowCount(0)
@@ -3194,11 +3246,11 @@ class SettingsDialog(QDialog):
         form_layout.addRow(path_group)
 
         # 2. Appearance & General
-        general_group = QGroupBox("General Settings")
+        general_group = QGroupBox(STRINGS["group_general_settings"])
         general_layout = QVBoxLayout()
         
         # Appearance
-        appearance_group = QGroupBox("Aesthetics (v6.5.0)")
+        aesthetics_group = QGroupBox(STRINGS["group_aesthetics"])
         app_layout = QFormLayout()
         
         self.theme_combo = QComboBox()
@@ -3216,14 +3268,14 @@ class SettingsDialog(QDialog):
         self.update_accent_preview(current_accent)
         accent_row.addWidget(self.accent_color_preview)
         
-        pick_accent_btn = QPushButton("Pick Custom Color")
+        pick_accent_btn = QPushButton(STRINGS["btn_pick_color"])
         pick_accent_btn.clicked.connect(self.pick_custom_accent)
         accent_row.addWidget(pick_accent_btn)
         accent_row.addStretch()
         app_layout.addRow("Accent Color:", accent_row)
         
-        appearance_group.setLayout(app_layout)
-        general_layout.addWidget(appearance_group)
+        aesthetics_group.setLayout(app_layout)
+        general_layout.addWidget(aesthetics_group)
         self.start_boot_chk = QCheckBox(STRINGS["chk_start_windows"])
         self.start_boot_chk.setChecked(self.is_run_on_startup())
         general_layout.addWidget(self.start_boot_chk)
@@ -3318,7 +3370,7 @@ class SettingsDialog(QDialog):
         form_layout.addRow(autolock_group)
 
         # 5. Cloud Sync ☁️
-        sync_group = QGroupBox("Cloud Sync")
+        cloud_group = QGroupBox(STRINGS["group_cloud_sync"])
         sync_layout = QVBoxLayout()
         sync_path_layout = QHBoxLayout()
         self.sync_path_input = QLineEdit(config.get('sync_path', ''))
@@ -3328,13 +3380,13 @@ class SettingsDialog(QDialog):
         browse_sync_btn.clicked.connect(self.browse_sync_folder)
         sync_path_layout.addWidget(browse_sync_btn)
         sync_layout.addLayout(sync_path_layout)
-        sync_info = QLabel("App will automatically save an encrypted copy for syncing.")
+        cloud_label = QLabel(STRINGS["lbl_cloud_sync_desc"])
         if self.theme_manager:
             p = self.theme_manager.get_palette()
-            sync_info.setStyleSheet(f"font-size: 9pt; color: {p['text_secondary']};")
-        sync_layout.addWidget(sync_info)
-        sync_group.setLayout(sync_layout)
-        form_layout.addRow(sync_group)
+            cloud_label.setStyleSheet(f"font-size: 9pt; color: {p['text_secondary']};")
+        sync_layout.addWidget(cloud_label)
+        cloud_group.setLayout(sync_layout)
+        form_layout.addRow(cloud_group)
 
         # 6. Backup Manager
         backup_group = QGroupBox(STRINGS["group_backup_restore"])
@@ -3406,7 +3458,7 @@ class SettingsDialog(QDialog):
         self.backup_list.clear()
         backup_dir = os.path.join(self.data_manager.config_dir, 'backups')
         if os.path.exists(backup_dir):
-            backups = sorted([f for f in os.listdir(backup_dir) if f.startswith('bill_data_')], reverse=True)
+            backups = sorted([f for f in os.listdir(backup_dir) if f.startswith('bill_data_')])
             self.backup_list.addItems(backups)
             
     def create_manual_backup(self):
@@ -3506,7 +3558,7 @@ class SettingsDialog(QDialog):
                         self.parent().load_data()
                         self.parent().update_display()
                 except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Failed to clear data: {e}")
+                    QMessageBox.critical(self, STRINGS["title_error"], f"Failed to clear data: {e}")
     
     def factory_reset(self):
         """Delete all configuration and data files."""
@@ -3537,10 +3589,10 @@ class SettingsDialog(QDialog):
                             except Exception as e:
                                 print(f"Failed to delete {file_path}. Reason: {e}")
                                 
-                    QMessageBox.information(self, "Reset Complete", "Application reset successful.\nThe application will now close.")
+                    QMessageBox.information(self, STRINGS["title_reset_complete"], STRINGS["msg_reset_success_close"])
                     QApplication.quit()
                 except Exception as e:
-                     QMessageBox.critical(self, "Error", f"Reset failed: {e}")
+                     QMessageBox.critical(self, STRINGS["title_error"], f"Reset failed: {e}")
 
     def browse_file(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Choose data file", "", "JSON Files (*.json)")
@@ -3554,9 +3606,7 @@ class SettingsDialog(QDialog):
         if new_path and new_path != self.data_manager.data_file:
             # Validate path for security
             if not validate_file_path(new_path):
-                QMessageBox.warning(self, "Invalid Path", 
-                    "For security reasons, data files must be stored in your user directory.\n"
-                    "System directories are not allowed.")
+                QMessageBox.warning(self, STRINGS["title_invalid_path"], STRINGS["msg_invalid_path_security"])
                 return
             
             self.data_manager.data_file = new_path
@@ -3617,8 +3667,7 @@ class SettingsDialog(QDialog):
         try:
             self.set_run_on_startup(self.start_boot_chk.isChecked())
         except PermissionError:
-            QMessageBox.warning(self, "Permission Denied", 
-                "Administrator rights required to modify startup settings.")
+            QMessageBox.warning(self, STRINGS["title_permission_denied"], STRINGS["msg_admin_rights_required"])
         except Exception as e:
             QMessageBox.critical(self, STRINGS["title_error"], 
                 f"Failed to update startup settings: {str(e)}")
@@ -3640,9 +3689,9 @@ class SettingsDialog(QDialog):
         target, _ = QFileDialog.getSaveFileName(self, STRINGS["title_backup_config"], default_name, "JSON Files (*.json)")
         if target:
             if self.data_manager.backup_config(target):
-                QMessageBox.information(self, "Success", STRINGS["msg_backup_success"])
+                QMessageBox.information(self, STRINGS["title_success"], STRINGS["msg_backup_success"])
             else:
-                QMessageBox.critical(self, "Error", "Backup failed.")
+                QMessageBox.critical(self, STRINGS["title_error"], STRINGS["msg_backup_failed"])
 
     def do_backup_data(self):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -3653,9 +3702,9 @@ class SettingsDialog(QDialog):
                 return
             try:
                 shutil.copy2(self.data_manager.data_file, target)
-                QMessageBox.information(self, "Success", STRINGS["msg_backup_success"])
+                QMessageBox.information(self, STRINGS["title_success"], STRINGS["msg_backup_success"])
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Backup failed: {e}")
+                QMessageBox.critical(self, STRINGS["title_error"], STRINGS["msg_backup_failed"].format(e))
 
     def do_restore_config(self):
         warning = QMessageBox.warning(self, STRINGS["title_restore_config"], 
@@ -3665,9 +3714,9 @@ class SettingsDialog(QDialog):
             source, _ = QFileDialog.getOpenFileName(self, STRINGS["title_restore_config"], "", "JSON Files (*.json);;All Files (*)")
             if source:
                 if self.data_manager.restore_file(source, 'config'):
-                    QMessageBox.information(self, "Restored", STRINGS["msg_restart_required"])
+                    QMessageBox.information(self, STRINGS["title_restored"], STRINGS["msg_restart_required"])
                 else:
-                    QMessageBox.critical(self, "Error", "Restore failed.")
+                    QMessageBox.critical(self, STRINGS["title_error"], STRINGS["msg_restore_failed"])
 
     def do_restore_data(self):
         warning = QMessageBox.warning(self, STRINGS["title_restore_data"], 
@@ -3677,12 +3726,12 @@ class SettingsDialog(QDialog):
             source, _ = QFileDialog.getOpenFileName(self, STRINGS["title_restore_data"], "", "JSON Files (*.json);;All Files (*)")
             if source:
                 if self.data_manager.restore_file(source, 'data'):
-                    QMessageBox.information(self, "Restored", "Data restored. Reloading...")
+                    QMessageBox.information(self, STRINGS["title_restored"], STRINGS["msg_data_restored_reload"])
                     if isinstance(self.parent(), BillTrackerWindow):
                         self.parent().load_data()
                         self.parent().update_display()
                 else:
-                    QMessageBox.critical(self, "Error", "Restore failed.")
+                    QMessageBox.critical(self, STRINGS["title_error"], STRINGS["msg_restore_failed"])
 
     def setup_pin(self):
         """Open dialog to set or change PIN."""
@@ -3690,7 +3739,7 @@ class SettingsDialog(QDialog):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_pin = dialog.pin_input.text().strip()
             if len(new_pin) < 4:
-                QMessageBox.warning(self, "Invalid PIN", "PIN must be at least 4 digits.")
+                QMessageBox.warning(self, STRINGS["title_invalid_pin"], STRINGS["msg_pin_too_short"])
                 return
             
             # Get current session PIN (for loading encrypted config)
@@ -3698,7 +3747,8 @@ class SettingsDialog(QDialog):
             
             # Update security metadata (ALWAYS UNENCRYPTED)
             self.data_manager.security['pin_enabled'] = True
-            self.data_manager.security['pin_hash'] = hashlib.sha256(new_pin.encode()).hexdigest()
+            self.data_manager.security['pin_hash'] = dialog.get_pin_hash()
+            self.data_manager.security['pin_hint'] = dialog.get_pin_hint()
             self.data_manager.save_security()
             
             # Update config (Config file stays as is, just re-saved with new PIN key)
@@ -3710,7 +3760,7 @@ class SettingsDialog(QDialog):
                 self.parent().session_pin = new_pin
                 
             self.pin_chk.setChecked(True)
-            QMessageBox.information(self, "Success", "PIN has been set and enabled.")
+            QMessageBox.information(self, STRINGS["title_success"], STRINGS["msg_pin_set_enabled"])
 
     def browse_sync_folder(self):
         """Open directory picker for cloud sync."""
@@ -4056,7 +4106,7 @@ class SplashScreen(QWidget):
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Loading message
-        self.message = QLabel("Initializing / მომზადება...")
+        self.message = QLabel(STRINGS["msg_loading_config"])
         self.message.setStyleSheet("font-size: 14px; color: #ffffff; background: transparent;")
         self.message.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
@@ -4110,31 +4160,31 @@ class LanguageSelectionDialog(QDialog):
     def __init__(self, accent_color='#6200ea', parent=None):
         super().__init__(parent)
         user_accent = accent_color
-        self.setWindowTitle("Language Selection")
+        self.setWindowTitle(STRINGS["title_language_selection"])
         self.setFixedSize(350, 200)
         self.selected_language = "English"  # Default
         
         layout = QVBoxLayout()
         layout.setSpacing(15)
         
-        title = QLabel("Welcome / მოგესალმებით")
+        title = QLabel(STRINGS["label_first_run_title"])
         # Use same accent as splash title for consistency
         title.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {user_accent};")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
         
-        hint = QLabel("Please select your language:\nაირჩიეთ სასურველი ენა:")
-        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(hint)
+        subtitle = QLabel(STRINGS["label_select_language"])
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(subtitle)
         
         self.lang_combo = QComboBox()
         self.lang_combo.addItems(["English", "Georgian"])
         layout.addWidget(self.lang_combo)
         
-        self.start_btn = QPushButton("Start Application")
-        self.start_btn.clicked.connect(self.on_start)
-        self.start_btn.setStyleSheet("font-weight: bold; padding: 5px;")
-        layout.addWidget(self.start_btn)
+        start_btn = QPushButton(STRINGS["btn_start_app"])
+        start_btn.clicked.connect(self.on_start)
+        start_btn.setStyleSheet("font-weight: bold; padding: 5px;")
+        layout.addWidget(start_btn)
         
         self.setLayout(layout)
 
@@ -4250,7 +4300,7 @@ class SubscriptionTab(QWidget):
         self.burn_rate_label.setFont(font)
         summary_layout.addWidget(self.burn_rate_label)
 
-        self.yearly_burn_label = QLabel("Yearly: 0.00 USD")
+        self.yearly_burn_label = QLabel(f"{STRINGS['lbl_yearly']}: 0.00 USD")
         self.yearly_burn_label.setStyleSheet("opacity: 0.8; font-size: 11pt;")
         summary_layout.addWidget(self.yearly_burn_label)
         
@@ -4396,7 +4446,7 @@ class SubscriptionTab(QWidget):
             
             # v6.3.2: Store bill object in item for editing/deletion
             item = QListWidgetItem(display_text)
-            if days_str == STRINGS.get("lbl_due_today", "Due Today") or days_str == STRINGS.get("lbl_overdue", "Overdue"):
+            if days_str == STRINGS["lbl_due_today"] or days_str == STRINGS["lbl_overdue"]:
                 item.setForeground(QColor("#ff5555")) # Alert color
 
             item.setData(Qt.ItemDataRole.UserRole, sub)
@@ -4426,7 +4476,7 @@ class CalendarTab(QWidget):
         self.layout.addWidget(self.calendar, 60)
         
         # Right: Details
-        self.details_group = QGroupBox(STRINGS.get("label_due_on", "Bills on {}").format(QDate.currentDate().toString(), ""))
+        self.details_group = QGroupBox(STRINGS["label_due_on"].format(QDate.currentDate().toString(), ""))
         self.details_layout = QVBoxLayout()
         self.details_list = QListWidget()
         self.details_layout.addWidget(self.details_list)
@@ -4444,7 +4494,7 @@ class CalendarTab(QWidget):
         date_str = qdate.toString("yyyy-MM-dd")
         # Format title safely
         try:
-           base_title = STRINGS.get("label_due_on", "Due on {}: {}")
+           base_title = STRINGS["label_due_on"]
            # We only start with one placeholder in standard text usually? 
            # Let's check the string definition: "Due on {}: {}" -> Format with date, ""
            title = base_title.format(date_str, "")
@@ -5267,6 +5317,7 @@ class BillTrackerWindow(QMainWindow):
         summary_search_btn = QPushButton("🔍 " + STRINGS["sort_name_button"])
         summary_search_btn.clicked.connect(lambda: self.open_currency_search(self.summary_currency_combo))
         currency_layout.addWidget(summary_search_btn)
+        currency_layout.addStretch()
         summary_layout.addLayout(currency_layout)
         
         summary_group.setLayout(summary_layout)
@@ -5495,24 +5546,15 @@ class BillTrackerWindow(QMainWindow):
         self.update_display()
         self.save_data()
     
-    def open_currency_search(self, combo_box):
-        """Open searchable currency selector for a combo box (Dashboard)."""
-        dialog = CurrencySelectorDialog(self, self.currencies, combo_box.currentText())
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            selected = dialog.get_selected_currency()
-            if selected:
-                # Ensure it's in the list (v6.7.4)
-                if combo_box.findText(selected) == -1:
-                    combo_box.addItem(selected)
-                combo_box.setCurrentText(selected)
+
     
     def load_data(self):
         data = self.data_manager.load_data(self.session_pin)
         self.custom_categories = data.get('custom_categories', [])
         
         if data.get('__tampered__'):
-            reply = QMessageBox.critical(self, "Security Alert", 
-                                       "Data Integrity Violation!\n\nThe data file has been modified externally.\nThis could be due to tampering or corruption.\n\nDo you want to restore from the last automatic backup?",
+            reply = QMessageBox.critical(self, STRINGS["title_security_alert"], 
+                                       STRINGS["msg_data_tampered"],
                                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if reply == QMessageBox.StandardButton.Yes:
                 self.restore_backup()
@@ -5597,7 +5639,7 @@ class BillTrackerWindow(QMainWindow):
             QMessageBox.warning(self, STRINGS["dialog_input_error"], STRINGS["error_valid_number"])
         except Exception as e:
             logging.exception("Failed to set budget")
-            QMessageBox.critical(self, "Error", f"Failed to set budget: {e}")
+            QMessageBox.critical(self, STRINGS["title_error"], f"Failed to set budget: {e}")
     
     def add_bill(self):
         name = sanitize_input(self.bill_name_input.text()) # Hardened: Strip hidden chars
@@ -5694,7 +5736,7 @@ class BillTrackerWindow(QMainWindow):
             self.update_display()
 
     def open_contact(self):
-        webbrowser.open("https://t.me/ofinilet")
+        webbrowser.open("https://guns.lol/grouvya")
 
     def open_donate(self):
         webbrowser.open("https://revolut.me/grouvya")
@@ -5797,9 +5839,9 @@ class BillTrackerWindow(QMainWindow):
                 except: pass
                 
         if success:
-            QMessageBox.information(self, STRINGS.get("title_success", "Success"), STRINGS.get("msg_report_generated", "Report generated successfully!"))
+            QMessageBox.information(self, STRINGS["title_success"], STRINGS["msg_report_generated"])
         else:
-            QMessageBox.critical(self, STRINGS.get("title_error", "Error"), STRINGS.get("msg_report_failed", "Failed to generate report."))
+            QMessageBox.critical(self, STRINGS["title_error"], STRINGS["msg_report_failed"])
 
     def check_due_bills(self):
         """Check for bills due today or tomorrow."""
@@ -6119,7 +6161,7 @@ class BillTrackerWindow(QMainWindow):
             rates = self.exchange_rates.copy()
             summary_curr = self.summary_currency_combo.currentText()
             metadata = self.currencies.get(summary_curr, {'symbol': '$'})
-            summary_symbol = metadata.get('symbol', '$') if isinstance(metadata, dict) else metadata
+            summary_symbol = metadata.get('symbol', '$') if isinstance(metadata, dict) else summary_symbol
             summary_rate = rates.get(summary_curr, 1)
 
         bills_on_day = [b for b in self.unpaid_bills if b.get('due_date') == dt]
@@ -6191,10 +6233,7 @@ class BillTrackerWindow(QMainWindow):
 
 
 
-    def on_currency_changed(self):
-        """Handle currency changes from any combo box."""
-        self.update_display()
-        self.save_data()
+
 
 
     def update_display(self):
@@ -6629,7 +6668,9 @@ class BillTrackerWindow(QMainWindow):
                     continue
                 
                 # Pass can_minimize=True so user can re-minimize from lock screen
-                dialog = PinEntryDialog(None, mode='verify', can_minimize=True)
+                # Also pass the PIN hint if it exists
+                pin_hint = self.data_manager.security.get('pin_hint')
+                dialog = PinEntryDialog(None, mode='verify', can_minimize=True, hint=pin_hint)
                 dialog.setWindowTitle(STRINGS["msg_app_locked"])
                 dialog.label.setText(STRINGS["msg_enter_pin_unlock"])
                 
@@ -6838,26 +6879,7 @@ class BillTrackerWindow(QMainWindow):
 
 
     
-    def export_csv(self):
-        """Export data to CSV."""
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
-        if not file_path:
-            return
-            
-        try:
-            with open(file_path, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                writer.writerow(['Name', 'Amount', 'Currency', 'Category', 'Frequency', 'Due Date', 'Status'])
-                for b in self.unpaid_bills:
-                    writer.writerow([b['name'], b['amount'], b['currency'], b.get('category', 'Other'), b.get('repeat_freq', 'No Repeat'), b.get('due_date', ''), 'Unpaid'])
-                for b in self.paid_bills:
-                    writer.writerow([b['name'], b['amount'], b['currency'], b.get('category', 'Other'), b.get('repeat_freq', 'No Repeat'), b.get('due_date', ''), 'Paid'])
-            QMessageBox.information(self, STRINGS["title_export_success"], STRINGS["msg_export_success"].format(file_path))
-        except Exception as e:
-            QMessageBox.critical(self, STRINGS["title_export_error"], str(e))
 
-        except Exception as e:
-            QMessageBox.critical(self, STRINGS["title_export_failed"], str(e))
 
 
 
