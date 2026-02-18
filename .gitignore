@@ -41,3 +41,10 @@ billtracker.iconset/
 # Windows
 Thumbs.db
 desktop.ini
+
+# Flatpak
+.flatpak-builder/
+build_dir/
+repo/
+venv_linux/
+venv_rpm/

@@ -1,0 +1,5 @@
+setuptools==65.7.0
+setuptools-rust
+maturin
+cryptography
+reportlab
