@@ -1,0 +1,17 @@
+PyQt BaseApp	com.riverbankcomputing.PyQt.BaseApp	6.6.1	6.6	flathub
+Flatpak Builder Flatpak	org.flatpak.Builder	v0-Flathub	stable	flathub
+Mesa	org.freedesktop.Platform.GL.default	25.0.7	23.08	flathub
+Mesa (Extra)	org.freedesktop.Platform.GL.default	25.0.7	23.08-extra	flathub
+Mesa	org.freedesktop.Platform.GL.default	25.3.3	25.08	flathub
+Mesa (Extra)	org.freedesktop.Platform.GL.default	25.3.3	25.08-extra	flathub
+nvidia-590-48-01	org.freedesktop.Platform.GL.nvidia-590-48-01		1.4	flathub
+Intel VAAPI driver	org.freedesktop.Platform.VAAPI.Intel		23.08	flathub
+Intel VAAPI driver	org.freedesktop.Platform.VAAPI.Intel		25.08	flathub
+Nvidia VAAPI driver	org.freedesktop.Platform.VAAPI.nvidia		25.08	flathub
+Codecs Extra Extension	org.freedesktop.Platform.codecs-extra		25.08-extra	flathub
+Freedesktop SDK	org.freedesktop.Sdk	freedesktop-sdk-25.08.7	25.08	flathub
+Rust stable	org.freedesktop.Sdk.Extension.rust-stable	1.81.0	23.08	flathub
+BillTracker	org.grouvya.BillTracker	7.4.0	master	billtracker-origin
+Adwaita theme	org.kde.KStyle.Adwaita		6.6	flathub
+KDE Application Platform	org.kde.Platform		6.6	flathub
+KDE Software Development Kit	org.kde.Sdk		6.6	flathub

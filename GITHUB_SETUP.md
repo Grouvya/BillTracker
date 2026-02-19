@@ -87,8 +87,8 @@ Once pushed, create your first release to trigger the build workflow:
 
 **Option B: Via Command Line**
 ```powershell
-git tag v5.5.0
-git push origin v5.5.0
+git tag v5.9.0
+git push origin v5.9.0
 ```
 
 ---

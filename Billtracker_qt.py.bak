@@ -1,0 +1,3786 @@
+
+#!/usr/bin/env python3
+# Bill & Savings Tracker - PyQt6 Version (Windows Compatible Modern GUI)
+# Version 5.10.10 (Proactive Stability)
+# To run: pip install PyQt6
+
+__version__ = '5.10.10'
+
+import sys
+import os
+import json
+from datetime import datetime, date
+import threading
+import webbrowser
+import urllib.request
+import ssl
+import ctypes
+import hashlib
+import shutil
+import csv
+import platform  # For cross-platform detection
+import re  # For input sanitization and validation
+
+# Platform-specific imports
+if platform.system() == 'Windows':
+    import winreg  # For Start with Windows (Windows only)
+
+import logging
+
+# Configure logging
+log_dir = os.path.join(os.path.expanduser('~'), '.bill_tracker')
+os.makedirs(log_dir, exist_ok=True)
+logging.basicConfig(
+    filename=os.path.join(log_dir, 'app.log'),
+    level=logging.WARNING,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    encoding='utf-8'
+)
+
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox,
+    QMessageBox, QDialog, QFormLayout, QDateEdit, QFileDialog, QProgressBar, QScrollArea, QListWidget,
+    QListWidgetItem, QGroupBox, QGridLayout, QDoubleSpinBox, QInputDialog, QListWidgetItem as ListItem,
+    QMenu, QAbstractItemView, QGraphicsDropShadowEffect, QGraphicsBlurEffect, QSystemTrayIcon, QTabWidget,
+    QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QCalendarWidget, QSpinBox
+)
+from PyQt6.QtCore import Qt, QTimer, QDate, QThread, pyqtSignal, QPoint, QRectF, QRect
+from PyQt6.QtGui import QFont, QColor, QAction, QIcon, QPalette, QPainter, QPen, QBrush, QTextDocument, QShortcut, QKeySequence
+from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
+from PyQt6.QtWidgets import QComboBox as _QComboBox
+
+TRANSLATIONS = {
+    'English': {
+        "app_title": "Bill & Savings Tracker",
+        "budget_group_title": "Set Your Budget",
+        "budget_row_title": "Budget Amount",
+        "set_budget_button": "Set Budget",
+        "add_bill_group_title": "Add a New Bill",
+        "bill_name_row": "Bill Name",
+        "amount_row": "Amount",
+        "due_date_row": "Due Date",
+        "add_bill_button": "Add Bill",
+        "summarize_in_label": "Summarize in:",
+        "total_unpaid_label": "Total of Unpaid Bills:",
+        "budget_after_paying_label": "Budget After Paying Bills:",
+        "actions_group_title": "Actions",
+        "converter_button": "Converter",
+        "clear_data_button": "Clear Data",
+        "btn_contact": "📩 Contact",
+        "refresh_rates_button": "Refresh Rates",
+        "settings_button": "Settings",
+        "unpaid_bills_title": "Unpaid Bills",
+        "sort_name_button": "Name",
+        "sort_date_button": "Date",
+        "sort_amount_button": "Amount",
+        "paid_bills_title": "Paid Bills",
+        "credits_label": "made with <3 by Grouvya!",
+        "pay_button": "Pay",
+        "due_on_label": "Due:",
+        "no_date_label": "No Date",
+        "edit_bill_title": "Edit Bill",
+        "bill_name_label": "Bill Name",
+        "amount_label": "Amount",
+        "currency_label": "Currency",
+        "due_date_label": "Due Date",
+        "save_changes_button": "Save Changes",
+        "converter_title": "Currency Converter",
+        "from_label": "From",
+        "to_label": "To",
+        "convert_button": "Convert",
+        "settings_title": "Settings",
+        "data_file_group_title": "Data File Location",
+        "browse_button": "Browse...",
+        "dialog_input_error": "Input Error",
+        "error_enter_name_amount": "Please enter both name and amount.",
+        "error_positive_amount": "Please enter a valid positive amount.",
+        "error_no_exchange_rate": "Could not find exchange rate.",
+        "error_valid_number": "Please enter a valid number for the budget.",
+        "info_budget_set": "Budget Set",
+        "info_budget_set_to": "Budget set to {}",
+        "info_path_saved": "Path Saved",
+        "info_path_saved_msg": "Data file path has been updated.",
+        "info_data_cleared": "Data Cleared",
+        "info_data_cleared_msg": "All data has been cleared.",
+        "dialog_confirm_payment": "Confirm Payment",
+        "confirm_payment_msg": "Are you sure you want to pay '{}'?",
+        "dialog_confirm_delete": "Confirm Delete",
+        "confirm_delete_msg": "Are you sure you want to delete '{}'?",
+        "dialog_clear_data": "Clear All Data",
+        "confirm_clear_data_msg": "Are you sure you want to delete all bills and reset your budget?",
+        "invalid_input": "Invalid Input",
+        "api_error": "API error. Using cached rates.",
+        "network_error": "Network error. Using cached rates.",
+        "rates_updated_at": "Live rates updated: {}",
+        "category_label": "Category",
+        "repeat_label": "Repeat",
+        "frequency_none": "No Repeat",
+        "frequency_weekly": "Weekly",
+        "frequency_monthly": "Monthly",
+        "frequency_yearly": "Yearly",
+        "tab_bills": "Bills",
+        "tab_charts": "Charts",
+        "tab_dashboard": "Dashboard",
+        "tab_unpaid": "Unpaid Bills",
+        "tab_paid": "Paid History",
+        "chart_budget_title": "Budget vs Expenses",
+        "chart_category_title": "Spending by Category",
+        "notification_title": "Bills Due Soon",
+        "notification_msg": "You have {} bills due today or tomorrow!",
+        "lang_restart_msg": "Language changed. Please restart the application to apply changes.",
+        "lang_group_title": "Language",
+        # New Translations
+        "chk_start_windows": "Start with Windows",
+        "chk_minimize_tray": "Minimize to Tray on Close",
+        "btn_minimize_tray": "Minimize to Tray",
+        "label_notify_me": "Notify me:",
+        "suffix_days_advance": " days in advance",
+        "btn_save_settings": "Save Settings",
+        "group_backup_restore": "Backup & Restore",
+        "btn_create_backup": "Create Backup",
+        "btn_restore_selected": "Restore Selected",
+        "group_danger_zone": "Danger Zone",
+        "btn_clear_all_data": "🗑️ Clear All Data",
+        "title_backup_created": "Backup Created",
+        "msg_backup_created": "Manual backup created successfully.",
+        "title_error": "Error",
+        "msg_backup_failed": "Failed to create backup: {}",
+        "title_selection_required": "Selection Required",
+        "msg_select_backup": "Please select a backup to restore.",
+        "title_confirm_restore": "Confirm Restore",
+        "msg_confirm_restore": "Are you sure you want to restore '{}'?\nCurrent data will be overwritten.",
+        "title_restored": "Restored",
+        "msg_restored": "Data restored successfully.",
+        "title_restore_failed": "Restore Failed",
+        "msg_restore_error": "Error restoring backup: {}",
+        "btn_delete_selected": "Delete Selected",
+        "title_confirm_delete_backup": "Confirm Delete",
+        "msg_confirm_delete_backup": "Are you sure you want to delete the backup '{}'?",
+        "msg_backup_deleted": "Backup deleted successfully.",
+        "title_clear_all_data": "Clear All Data",
+        "msg_confirm_clear_1": "Are you sure you want to delete ALL data?\nThis action cannot be undone!",
+        "title_double_confirm": "Double Confirmation",
+        "msg_confirm_clear_2": "Really delete everything? All bills, budget, and settings will be lost.",
+        "title_data_cleared": "Data Cleared",
+        "msg_data_cleared_restart": "All data has been cleared.",
+        "title_restart_required": "Restart Required",
+        "btn_copy_result": "📋 Copy Result",
+        "title_copied": "Copied",
+        "msg_copied": "Result copied to clipboard!",
+        "msg_running_background": "App is running in the background.",
+        "label_monthly_history": "Monthly Spending History",
+        "tab_trends": "📊 Trends",
+        "tab_calendar": "📅 Calendar",
+        "tab_about": "ℹ️ About",
+        "title_quick_status": "Quick Status",
+        "btn_export_csv": "📂 Export CSV",
+        "btn_export_pdf": "📄 Export PDF",
+        "group_support_data": "Support & Data",
+        "group_quick_status": "Quick Status",
+        "label_filter_category": "Filter by Category:",
+        "item_all_categories": "All Categories",
+        "header_name": "Name",
+        "header_amount": "Amount",
+        "header_category": "Category",
+        "header_due_date": "Due Date",
+        "header_frequency": "Frequency",
+        "header_paid_date": "Paid Date",
+        "label_calendar_hint": "Select a date to see bills.",
+        "msg_no_backups": "No backups found.",
+        "msg_bill_name_long": "Bill name is too long (max 100 chars).",
+        "msg_amount_large": "Amount is too large.",
+        "msg_invalid_format": "Invalid input format.",
+        "title_recurring_created": "Recurring Bill Created",
+        "msg_recurring_created": "Next {} due on {}",
+        "title_export_success": "Export Successful",
+        "msg_export_success": "Data exported to {}",
+        "title_export_failed": "Export Failed",
+        "label_first_run_title": "Welcome to BillTracker!",
+        "label_select_language": "Please select your preferred language:",
+        "btn_start_app": "Start Application",
+        "legend_save_image": "💾 Save Chart as Image",
+        "title_save_chart": "Save Chart",
+        "title_saved": "Saved",
+        "msg_chart_saved": "Chart saved to {}",
+        "btn_search": "🔍 Search",
+        "title_select_currency": "Select Currency",
+        "label_search_currency": "Search currency (code, symbol, or name):",
+        "btn_ok": "OK",
+        "btn_cancel": "Cancel",
+        "label_remaining": "Remaining",
+        "label_unpaid_bills_chart": "Unpaid Bills",
+        "label_due_on": "Due on {}: {}",
+        "label_no_bills_due": "No bills due on {}",
+        "filter_csv": "CSV Files (*.csv)",
+        "title_export_data": "Export Data",
+        "categories_list": ["Housing", "Utilities", "Food", "Transport", "Subscription", "Debt", "Healthcare", "Personal", "Other"],
+        "frequencies_list": ["No Repeat", "Weekly", "Monthly", "Yearly"],
+        "label_filter_category": "Filter by Category:",
+        "item_all_categories": "All Categories",
+        "label_total_paid": "Total Paid",
+        "menu_pay_bill": "💰 Pay Bill",
+        "menu_edit_bill": "✏️ Edit Bill",
+        "menu_delete_bill": "🗑️ Delete Bill",
+        "menu_restore_unpaid": "↩️ Restore to Unpaid",
+        "menu_delete_permanently": "🗑️ Delete Permanently",
+        "title_confirm_delete_history": "Confirm Delete",
+        "msg_confirm_delete_history": "Are you sure you want to delete '{}' from history?",
+        "title_no_history": "No History",
+        "msg_no_history": "No paid bills found.",
+        "btn_contact": "📩 Contact",
+        "credits_link": "✨ Created by Grouvya! ✨",
+        "btn_search": "🔍 Search Bills",
+        "title_search": "Search Bills",
+        "label_search_hint": "Search by name, amount, category, or date...",
+        "header_status": "Status",
+        "status_unpaid": "Unpaid",
+        "status_paid": "Paid",
+        "menu_view_details": "👁️ View Details",
+        "msg_no_results": "No bills found matching your search.",
+        "label_shortcut_search": "Press Ctrl+F to Search",
+        "label_shortcut_add": "Press Ctrl+N to Add Bill",
+        "title_success": "Success",
+        "msg_bill_added": "Bill '{}' added successfully!",
+    },
+    'Georgian': {
+        "app_title": "ხარჯების და გადასახადების ტრეკერი",
+        "budget_group_title": "ბიუჯეტის განსაზღვრა",
+        "budget_row_title": "ბიუჯეტის რაოდენობა",
+        "set_budget_button": "ბიუჯეტის შენახვა",
+        "add_bill_group_title": "ახალი გადასახადის დამატება",
+        "bill_name_row": "დასახელება",
+        "amount_row": "თანხა",
+        "due_date_row": "გადახდის თარიღი",
+        "add_bill_button": "დამატება",
+        "summarize_in_label": "ჯამური ვალუტა:",
+        "total_unpaid_label": "სულ გადასახდელი:",
+        "budget_after_paying_label": "დარჩენილი ბიუჯეტი:",
+        "actions_group_title": "მოქმედებები",
+        "converter_button": "კონვერტერი",
+        "clear_data_button": "მონაცემების წაშლა",
+        "btn_contact": "📩 კონტაქტი",
+        "refresh_rates_button": "კურსების განახლება",
+        "settings_button": "პარამეტრები",
+        "unpaid_bills_title": "გადასახდელი ბილეთები",
+        "sort_name_button": "სახელი",
+        "sort_date_button": "თარიღი",
+        "sort_amount_button": "თანხა",
+        "paid_bills_title": "გადახდილი ისტორია",
+        "credits_label": "შექმნილია <3 Grouvya-ს მიერ!",
+        "pay_button": "გადახდა",
+        "due_on_label": "ვადა:",
+        "no_date_label": "უვადო",
+        "edit_bill_title": "რედაქტირება",
+        "bill_name_label": "დასახელება",
+        "amount_label": "თანხა",
+        "currency_label": "ვალუტა",
+        "due_date_label": "ვადა",
+        "save_changes_button": "შენახვა",
+        "converter_title": "ვალუტის კონვერტერი",
+        "from_label": "დან",
+        "to_label": "ში",
+        "convert_button": "კონვერტაცია",
+        "settings_title": "პარამეტრები",
+        "data_file_group_title": "მონაცემთა ფაილი",
+        "browse_button": "არჩევა...",
+        "dialog_input_error": "შეცდომა",
+        "error_enter_name_amount": "გთხოვთ შეიყვანოთ სახელი და თანხა.",
+        "error_positive_amount": "გთხოვთ შეიყვანოთ დადებითი თანხა.",
+        "error_no_exchange_rate": "კურსი ვერ მოიძებნა.",
+        "error_valid_number": "ბიუჯეტი უნდა იყოს რიცხვი.",
+        "info_budget_set": "ბიუჯეტი შენახულია",
+        "info_budget_set_to": "ბიუჯეტი განისაზღვრა: {}",
+        "info_path_saved": "გზა შენახულია",
+        "info_path_saved_msg": "მონაცემთა ფაილის მისამართი განახლდა.",
+        "info_data_cleared": "მონაცემები წაიშალა",
+        "info_data_cleared_msg": "ყველა მონაცემი წაშლილია.",
+        "dialog_confirm_payment": "გადახდის დადასტურება",
+        "confirm_payment_msg": "ნამდვილად გსურთ გადაიხადოთ '{}'?",
+        "dialog_confirm_delete": "წაშლის დადასტურება",
+        "confirm_delete_msg": "ნამდვილად გსურთ წაშალოთ '{}'?",
+        "dialog_clear_data": "ყველაფრის წაშლა",
+        "confirm_clear_data_msg": "ნამდვილად გსურთ წაშალოთ ყველა მონაცემი?",
+        "invalid_input": "არასწორი მონაცემი",
+        "api_error": "API შეცდომა. კურსები ქეშიდან.",
+        "network_error": "ქსელის შეცდომა. კურსები ქეშიდან.",
+        "rates_updated_at": "განახლდა: {}",
+        "category_label": "კატეგორია",
+        "repeat_label": "გამეორება",
+        "frequency_none": "არ განმეორდეს",
+        "frequency_weekly": "კვირაში ერთხელ",
+        "frequency_monthly": "თვეში ერთხელ",
+        "frequency_yearly": "წელიწადში ერთხელ",
+        "tab_bills": "გადასახადები",
+        "tab_charts": "გრაფიკები",
+        "tab_dashboard": "დაფა",
+        "tab_unpaid": "გადასახდელი",
+        "tab_paid": "ისტორია",
+        "chart_budget_title": "ბიუჯეტი vs ხარჯები",
+        "chart_category_title": "ხარჯები კატეგორიების მიხედვით",
+        "notification_title": "მოახლოებული გადასახადები",
+        "notification_msg": "თქვენ გაქვთ {} გადასახადი დღეს ან ხვალ!",
+        "lang_restart_msg": "ენა შეიცვალა. ცვლილებების ასახვისთვის გთხოვთ გადატვირთოთ პროგრამა.",
+        "lang_group_title": "ენა",
+        # New Translations (Georgian)
+        "chk_start_windows": "Windows-თან ერთად ჩართვა",
+        "chk_minimize_tray": "ჩაკეცვა დახურვისას",
+        "btn_minimize_tray": "სისტემურ ზონაში ჩაკეცვა",
+        "label_notify_me": "შემატყობინე:",
+        "suffix_days_advance": " დღით ადრე",
+        "btn_save_settings": "პარამეტრების შენახვა",
+        "group_backup_restore": "მონაცემთა არქივი",
+        "btn_create_backup": "არქივის შექმნა",
+        "btn_restore_selected": "არქივიდან აღდგენა",
+        "group_danger_zone": "საშიში ზონა",
+        "btn_clear_all_data": "🗑️ ყველაფრის წაშლა",
+        "title_backup_created": "არქივი შეიქმნა",
+        "msg_backup_created": "მონაცემთა არქივი წარმატებით შეიქმნა.",
+        "title_error": "შეცდომა",
+        "msg_backup_failed": "არქივის შექმნა ვერ მოხერხდა: {}",
+        "title_selection_required": "აირჩიეთ ფაილი",
+        "msg_select_backup": "გთხოვთ აირჩიოთ სარეზერვო ფაილი აღსადგენად.",
+        "title_confirm_restore": "აღდგენის დადასტურება",
+        "msg_confirm_restore": "ნამდვილად გსურთ აღადგინოთ '{}'?\nმიმდინარე მონაცემები გადაიწერება.",
+        "title_restored": "აღდგენილია",
+        "msg_restored": "მონაცემები წარმატებით აღდგა.",
+        "title_restore_failed": "აღდგენა ვერ მოხერხდა",
+        "msg_restore_error": "შეცდომა აღდგენისას: {}",
+        "btn_delete_selected": "არჩეულის წაშლა",
+        "title_confirm_delete_backup": "წაშლის დადასტურება",
+        "msg_confirm_delete_backup": "ნამდვილად გსურთ წაშალოთ არქივი '{}'?",
+        "msg_backup_deleted": "არქივი წარმატებით წაიშალა.",
+        "title_clear_all_data": "მონაცემების წაშლა",
+        "msg_confirm_clear_1": "ნამდვილად გსურთ წაშალოთ ყველა მონაცემი?\nამ მოქმედების გაუქმება შეუძლებელია!",
+        "title_double_confirm": "ორმაგი დადასტურება",
+        "msg_confirm_clear_2": "ნამდვილად შალავთ ყველაფერს? ყველა მონაცემი დაიკარგება.",
+        "title_data_cleared": "მონაცემები წაიშალა",
+        "msg_data_cleared_restart": "ყველა მონაცემი წაშლილია.",
+        "title_restart_required": "საჭიროა გადატვირთვა",
+        "btn_copy_result": "📋 შედეგის კოპირება",
+        "title_copied": "კოპირებულია",
+        "msg_copied": "შედეგი დაკოპირდა ბუფერში!",
+        "msg_running_background": "პროგრამა აგრძელებს მუშაობას ფონურ რეჟიმში.",
+        "label_monthly_history": "თვის ხარჯების ისტორია",
+        "tab_trends": "📊 ტრენდები",
+        "tab_calendar": "📅 კალენდარი",
+        "tab_about": "ℹ️ პროგრამის შესახებ",
+        "title_quick_status": "სწრაფი სტატუსი",
+        "btn_export_csv": "📂 CSV ექსპორტი",
+        "btn_export_pdf": "📄 PDF ექსპორტი",
+        "group_support_data": "მხარდაჭერა და მონაცემები",
+        "group_quick_status": "სწრაფი სტატუსი",
+        "label_filter_category": "ფილტრი კატეგორიით:",
+        "item_all_categories": "ყველა კატეგორია",
+        "header_name": "სახელი",
+        "header_amount": "თანხა",
+        "header_category": "კატეგორია",
+        "header_due_date": "ვადა",
+        "header_frequency": "სიხშირე",
+        "header_paid_date": "გადახდის თარიღი",
+        "label_calendar_hint": "აირჩიეთ თარიღი გადასახადების სანახავად.",
+        "msg_no_backups": "არქივები ვერ მოიძებნა.",
+        "msg_bill_name_long": "დასახელება ძალიან გრძელია (მაქს. 100 სიმბოლო).",
+        "msg_amount_large": "თანხა ძალიან დიდია.",
+        "msg_invalid_format": "არასწორი ფორმატი.",
+        "title_recurring_created": "განმეორებადი გადასახადი შეიქმნა",
+        "msg_recurring_created": "შემდეგი გადასახადი {} იქნება {} -ში",
+        "title_export_success": "ექსპორტი წარმატებულია",
+        "msg_export_success": "მონაცემები ექსპორტირებულია: {}",
+        "title_export_failed": "ექსპორტი ვერ მოხერხდა",
+        "label_first_run_title": "მოგესალმებათ BillTracker-ში!",
+        "label_select_language": "გთხოვთ აირჩიოთ სასურველი ენა:",
+        "btn_start_app": "პროგრამის გაშვება",
+        "legend_save_image": "💾 შენახვა სურათად",
+        "title_save_chart": "გრაფიკის შენახვა",
+        "title_saved": "შენახულია",
+        "msg_chart_saved": "გრაფიკი შენახულია: {}",
+        "btn_search": "🔍 ძებნა",
+        "title_select_currency": "აირჩიეთ ვალუტა",
+        "label_search_currency": "მოძებნეთ ვალუტა (კოდი, სიმბოლო ან სახელი):",
+        "btn_ok": "OK",
+        "btn_cancel": "გაუქმება",
+        "label_remaining": "დარჩენილი",
+        "label_unpaid_bills_chart": "გადასახდელი",
+        "label_due_on": "გადასახდელია {}: {}",
+        "label_no_bills_due": "არ არის გადასახდელი {}-ში",
+        "filter_csv": "CSV ფაილები (*.csv)",
+        "title_export_data": "მონაცემების ექსპორტი",
+        "categories_list": ["ბინა", "კომუნალურები", "საკვები", "ტრანსპორტი", "გამოწერები", "ვალები", "ჯანდაცვა", "პირადი", "სხვა"],
+        "frequencies_list": ["არ განმეორდეს", "კვირეული", "თვიური", "წლიური"],
+        "label_filter_category": "კატეგორიის ფილტრი:",
+        "item_all_categories": "ყველა კატეგორია",
+        "label_total_paid": "სულ გადახდილი",
+        "menu_pay_bill": "💰 გადახდა",
+        "menu_edit_bill": "✏️ რედაქტირება",
+        "menu_delete_bill": "🗑️ წაშლა",
+        "menu_restore_unpaid": "↩️ გადატანა გადასახდელში",
+        "menu_delete_permanently": "🗑️ სამუდამოდ წაშლა",
+        "title_confirm_delete_history": "წაშლის დადასტურება",
+        "msg_confirm_delete_history": "ნამდვილად გსურთ '{}'-ს წაშლა ისტორიიდან?",
+        "title_no_history": "ისტორია ცარიელია",
+        "msg_no_history": "გადახდილი გადასახადები ვერ მოიძებნა.",
+        "btn_contact": "📩 კონტაქტი",
+        "credits_link": "✨ შექმნილია Grouvya-ს მიერ! ✨",
+        "btn_search": "🔍 ძებნა",
+        "title_search": "გადასახადების ძებნა",
+        "label_search_hint": "მოძებნეთ სახელით, თანხით, კატეგორიით ან თარიღით...",
+        "header_status": "სტატუსი",
+        "status_unpaid": "გადასახდელი",
+        "status_paid": "გადახდილი",
+        "menu_view_details": "👁️ დეტალები",
+        "msg_no_results": "არ მოიძებნა შესაბამისი გადასახადი.",
+        "label_shortcut_search": "დააჭირეთ Ctrl+F ძებნისთვის",
+        "label_shortcut_add": "დააჭირეთ Ctrl+N დასამატებლად",
+        "title_success": "წარმატება",
+        "msg_bill_added": "გადასახადი '{}' წარმატებით დაემატა!",
+    }
+}
+
+class SafeStrings:
+    """Wrapper for translation dictionary that prevents KeyError crashes."""
+    def __init__(self, language='English'):
+        self.language = language
+        self._data = TRANSLATIONS.get(language, TRANSLATIONS['English'])
+        self._fallback = TRANSLATIONS['English']
+
+    def __getitem__(self, key):
+        if key in self._data:
+            return self._data[key]
+        if key in self._fallback:
+            logging.warning(f"Translation key '{key}' missing in '{self.language}'. Using English fallback.")
+            return self._fallback[key]
+        logging.error(f"Translation key '{key}' completely missing!")
+        return f"[{key}]"
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except Exception:
+            return default or f"[{key}]"
+
+def sanitize_input(text):
+    """Strip potentially dangerous or invisible characters."""
+    if not isinstance(text, str):
+        return ""
+    # Remove control characters and limit length
+    cleaned = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
+    return cleaned[:500].strip()
+
+def strict_float(value):
+    """Convert value to float, handling comma/dot and other common issues."""
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not value or not isinstance(value, str):
+        return 0.0
+    try:
+        # Standardize decimal separator
+        clean_val = value.replace(',', '.').strip()
+        # Remove currency symbols if any sneak in
+        clean_val = re.sub(r'[^\d.-]', '', clean_val)
+        return float(clean_val)
+    except (ValueError, TypeError):
+        return 0.0
+
+# Determine Language on Startup
+STRINGS = SafeStrings('English')
+
+# Global Constants based on STRINGS
+# These are used for UI display
+CATEGORIES = STRINGS["categories_list"]
+FREQUENCIES = STRINGS["frequencies_list"]
+
+# Canonical Keys for Internal Storage (Always English)
+CANONICAL_CATEGORIES = TRANSLATIONS['English']['categories_list']
+CANONICAL_FREQUENCIES = TRANSLATIONS['English']['frequencies_list']
+
+def get_canonical_category(display_text):
+    """Convert display text (any language) to canonical English key."""
+    # Check if already canonical
+    if display_text in CANONICAL_CATEGORIES:
+        return display_text
+    
+    # Check all languages
+    for lang_code, strings in TRANSLATIONS.items():
+        if 'categories_list' in strings:
+            try:
+                idx = strings['categories_list'].index(display_text)
+                return CANONICAL_CATEGORIES[idx]
+            except ValueError:
+                continue
+    return display_text # Fallback
+
+def get_canonical_frequency(display_text):
+    """Convert display text (any language) to canonical English key."""
+    # Check if already canonical
+    if display_text in CANONICAL_FREQUENCIES:
+        return display_text
+        
+    # Check all languages
+    for lang_code, strings in TRANSLATIONS.items():
+        if 'frequencies_list' in strings:
+            try:
+                idx = strings['frequencies_list'].index(display_text)
+                return CANONICAL_FREQUENCIES[idx]
+            except ValueError:
+                continue
+    return display_text # Fallback
+
+def get_display_category(canonical_key):
+    """Convert canonical key to current language display text."""
+    try:
+        idx = CANONICAL_CATEGORIES.index(canonical_key)
+        # Use current STRINGS which is already set to correct language
+        return STRINGS["categories_list"][idx]
+    except (ValueError, IndexError):
+        return canonical_key
+
+def get_display_frequency(canonical_key):
+    """Convert canonical key to current language display text."""
+    try:
+        idx = CANONICAL_FREQUENCIES.index(canonical_key)
+        return STRINGS["frequencies_list"][idx]
+    except (ValueError, IndexError):
+        return canonical_key
+
+CURRENCY_FULL_NAMES = {
+    'AFN': 'Afghan Afghani', 'ALL': 'Albanian Lek', 'AMD': 'Armenian Dram', 'ANG': 'Netherlands Antillean Guilder',
+    'AOA': 'Angolan Kwanza', 'ARS': 'Argentine Peso', 'AUD': 'Australian Dollar', 'AWG': 'Aruban Florin',
+    'AZN': 'Azerbaijani Manat', 'BAM': 'Bosnia-Herzegovina Convertible Mark', 'BBD': 'Barbadian Dollar', 'BDT': 'Bangladeshi Taka',
+    'BGN': 'Bulgarian Lev', 'BHD': 'Bahraini Dinar', 'BIF': 'Burundian Franc', 'BMD': 'Bermudian Dollar',
+    'BND': 'Brunei Dollar', 'BOB': 'Bolivian Boliviano', 'BRL': 'Brazilian Real', 'BSD': 'Bahamian Dollar',
+    'BTN': 'Bhutanese Ngultrum', 'BWP': 'Botswana Pula', 'BYN': 'Belarusian Ruble', 'BZD': 'Belize Dollar',
+    'CAD': 'Canadian Dollar', 'CDF': 'Congolese Franc', 'CHF': 'Swiss Franc', 'CLP': 'Chilean Peso',
+    'CNY': 'Chinese Yuan', 'COP': 'Colombian Peso', 'CRC': 'Costa Rican Colón', 'CUP': 'Cuban Peso',
+    'CVE': 'Cape Verdean Escudo', 'CZK': 'Czech Koruna', 'DJF': 'Djiboutian Franc', 'DKK': 'Danish Krone',
+    'DOP': 'Dominican Peso', 'DZD': 'Algerian Dinar', 'EGP': 'Egyptian Pound', 'ERN': 'Eritrean Nakfa',
+    'ETB': 'Ethiopian Birr', 'EUR': 'Euro', 'FJD': 'Fijian Dollar', 'FKP': 'Falkland Islands Pound',
+    'GBP': 'British Pound Sterling', 'GEL': 'Georgian Lari', 'GHS': 'Ghanaian Cedi', 'GIP': 'Gibraltar Pound',
+    'GMD': 'Gambian Dalasi', 'GNF': 'Guinean Franc', 'GTQ': 'Guatemalan Quetzal', 'GYD': 'Guyanese Dollar',
+    'HKD': 'Hong Kong Dollar', 'HNL': 'Honduran Lempira', 'HRK': 'Croatian Kuna', 'HTG': 'Haitian Gourde',
+    'HUF': 'Hungarian Forint', 'IDR': 'Indonesian Rupiah', 'ILS': 'Israeli New Shekel', 'INR': 'Indian Rupee',
+    'IQD': 'Iraqi Dinar', 'IRR': 'Iranian Rial', 'ISK': 'Icelandic Króna', 'JEP': 'Jersey Pound',
+    'JMD': 'Jamaican Dollar', 'JOD': 'Jordanian Dinar', 'JPY': 'Japanese Yen', 'KES': 'Kenyan Shilling',
+    'KGS': 'Kyrgyzstani Som', 'KHR': 'Cambodian Riel', 'KMF': 'Comorian Franc', 'KPW': 'North Korean Won',
+    'KRW': 'South Korean Won', 'KWD': 'Kuwaiti Dinar', 'KYD': 'Cayman Islands Dollar', 'KZT': 'Kazakhstani Tenge',
+    'LAK': 'Lao Kip', 'LBP': 'Lebanese Pound', 'LKR': 'Sri Lankan Rupee', 'LRD': 'Liberian Dollar',
+    'LSL': 'Lesotho Loti', 'LTL': 'Lithuanian Litas (historic)', 'LVL': 'Latvian Lats (historic)', 'LYD': 'Libyan Dinar',
+    'MAD': 'Moroccan Dirham', 'MDL': 'Moldovan Leu', 'MGA': 'Malagasy Ariary', 'MKD': 'Macedonian Denar',
+    'MMK': 'Myanmar Kyat', 'MNT': 'Mongolian Tögrög', 'MOP': 'Macanese Pataca', 'MRO': 'Mauritanian Ouguiya (historic)',
+    'MUR': 'Mauritian Rupee', 'MVR': 'Maldivian Rufiyaa', 'MWK': 'Malawian Kwacha', 'MXN': 'Mexican Peso',
+    'MYR': 'Malaysian Ringgit', 'MZN': 'Mozambican Metical', 'NAD': 'Namibian Dollar', 'NGN': 'Nigerian Naira',
+    'NIO': 'Nicaraguan Córdoba', 'NOK': 'Norwegian Krone', 'NPR': 'Nepalese Rupee', 'NZD': 'New Zealand Dollar',
+    'OMR': 'Omani Rial', 'PAB': 'Panamanian Balboa', 'PEN': 'Peruvian Sol', 'PGK': 'Papua New Guinean Kina',
+    'PHP': 'Philippine Peso', 'PKR': 'Pakistani Rupee', 'PLN': 'Polish Złoty', 'PYG': 'Paraguayan Guaraní',
+    'QAR': 'Qatari Riyal', 'RON': 'Romanian Leu', 'RSD': 'Serbian Dinar', 'RUB': 'Russian Ruble',
+    'RWF': 'Rwandan Franc', 'SAR': 'Saudi Riyal', 'SBD': 'Solomon Islands Dollar', 'SCR': 'Seychellois Rupee',
+    'SDG': 'Sudanese Pound', 'SEK': 'Swedish Krona', 'SGD': 'Singapore Dollar', 'SHP': 'Saint Helena Pound',
+    'SLL': 'Sierra Leonean Leone', 'SOS': 'Somali Shilling', 'SRD': 'Surinamese Dollar', 'STD': 'Sao Tome Dobra (historic)',
+    'SVC': 'Salvadoran Colón', 'SYP': 'Syrian Pound', 'SZL': 'Swazi Lilangeni', 'THB': 'Thai Baht',
+    'TJS': 'Tajikistani Somoni', 'TMT': 'Turkmenistan Manat', 'TND': 'Tunisian Dinar', 'TOP': 'Tongan Paʻanga',
+    'TRY': 'Turkish Lira', 'TTD': 'Trinidad and Tobago Dollar', 'TWD': 'New Taiwan Dollar', 'TZS': 'Tanzanian Shilling',
+    'UAH': 'Ukrainian Hryvnia', 'UGX': 'Ugandan Shilling', 'USD': 'United States Dollar', 'UYU': 'Uruguayan Peso',
+    'UZS': 'Uzbekistan Som', 'VEF': 'Venezuelan Bolívar (historic)', 'VND': 'Vietnamese Đồng', 'VUV': 'Vanuatu Vatu',
+    'WST': 'Samoan Tala', 'XAF': 'Central African CFA Franc', 'XCD': 'East Caribbean Dollar', 'XOF': 'West African CFA Franc',
+    'XPF': 'CFP Franc', 'YER': 'Yemeni Rial', 'ZAR': 'South African Rand', 'ZMW': 'Zambian Kwacha', 'ZWL': 'Zimbabwean Dollar'
+}
+
+
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
+def get_icon_path():
+    """Get platform-appropriate icon path."""
+    if platform.system() == 'Windows':
+        return resource_path('billtracker.ico')
+    else:
+        # macOS and Linux use PNG
+        return resource_path('billtracker.png')
+
+
+
+
+
+def safe_parse_date(date_str, fallback='9999-12-31'):
+    """Safely parse a date string, returning a fallback on failure."""
+    if not date_str:
+        return fallback
+    try:
+        # Check basic format to avoid expensive exception
+        if len(date_str) != 10 or date_str[4] != '-' or date_str[7] != '-':
+             raise ValueError
+        datetime.strptime(date_str, '%Y-%m-%d')
+        return date_str
+    except (ValueError, TypeError):
+        logging.warning(f"Invalid date encountered: {date_str}")
+        return fallback
+
+# Security Utilities - consolidated in v5.9.7 🛡️
+def sanitize_input(text, max_length=100):
+    """Strip potentially dangerous or invisible characters."""
+    if not isinstance(text, str):
+        return ""
+    # Remove control characters and limit length
+    cleaned = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
+    return cleaned[:max_length].strip()
+
+def validate_file_path(path):
+    """Validate file path to prevent traversal attacks."""
+    try:
+        # Resolve to absolute path
+        abs_path = os.path.abspath(path)
+        
+        # Check if within user's home directory
+        home = os.path.expanduser('~')
+        if not abs_path.startswith(home):
+            return False
+            
+        # Prevent access to system directories
+        forbidden = ['system32', 'windows', 'program files']
+        path_lower = abs_path.lower()
+        if any(f in path_lower for f in forbidden):
+            return False
+            
+        return True
+    except:
+        return False
+
+
+class DataManager:
+    """Handles loading and saving of config and application data."""
+    def __init__(self, config_dir):
+        self.config_dir = config_dir
+        self.config_file = os.path.join(self.config_dir, 'config.json')
+        self.data_file = os.path.join(self.config_dir, 'bill_data.json')
+        os.makedirs(self.config_dir, exist_ok=True)
+
+
+
+
+    def load_config(self):
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self.data_file = config.get('data_file_path', self.data_file)
+                    return config
+            except (json.JSONDecodeError, IOError):
+                return {}
+        return {}
+
+    def save_config(self, config_data):
+        try:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(config_data, f, indent=4)
+        except IOError as e:
+            logging.error(f"Error saving config: {e}")
+
+    def load_data(self):
+        if os.path.exists(self.data_file):
+            try:
+                # Security: Check file size (max 10MB to prevent DoS)
+                file_size = os.path.getsize(self.data_file)
+                if file_size > 10 * 1024 * 1024:
+                    logging.error(f"Data file too large: {file_size} bytes (max 10MB)")
+                    return {}
+                
+                with open(self.data_file, 'r', encoding='utf-8') as f:
+                    content = f.read(10 * 1024 * 1024)  # Max 10MB read
+                
+                # Integrity Check
+                hash_file = self.data_file + ".sha256"
+                is_tampered = False
+                if os.path.exists(hash_file):
+                    try:
+                        with open(hash_file, 'r', encoding='utf-8') as f:
+                            saved_hash = f.read().strip()
+                        current_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+                        if current_hash != saved_hash:
+                            is_tampered = True
+                            logging.warning("Data file integrity check failed - hash mismatch")
+                    except (IOError, OSError) as e:
+                        logging.warning(f"Could not verify data integrity: {e}")
+
+                data = json.loads(content)
+                if not isinstance(data, dict):
+                    return {}
+                # Basic schema validation
+                safe_data = {}
+                safe_data['budget'] = float(data.get('budget', 0.0))
+                safe_data['unpaid_bills'] = [b for b in data.get('unpaid_bills', []) if isinstance(b, dict) and 'name' in b and 'amount' in b]
+                safe_data['paid_bills'] = [b for b in data.get('paid_bills', []) if isinstance(b, dict) and 'name' in b and 'amount' in b]
+                safe_data['budget_currency'] = str(data.get('budget_currency', '$ (USD)'))
+                safe_data['bill_currency'] = str(data.get('bill_currency', '$ (USD)'))
+                safe_data['summary_currency'] = str(data.get('summary_currency', '$ (USD)'))
+                
+                # MIGRATION: Normalize to Canonical English Keys
+                for bill in safe_data['unpaid_bills'] + safe_data['paid_bills']:
+                    if 'category' in bill:
+                        bill['category'] = get_canonical_category(bill['category'])
+                    if 'repeat_freq' in bill:
+                        bill['repeat_freq'] = get_canonical_frequency(bill['repeat_freq'])
+                
+                if is_tampered:
+                    safe_data['__tampered__'] = True
+                    
+                return safe_data
+            except json.JSONDecodeError as e:
+                logging.error(f"JSON decode error in data file: {e}")
+                return {}
+            except (IOError, OSError) as e:
+                logging.error(f"File I/O error loading data: {e}")
+                return {}
+            except ValueError as e:
+                logging.error(f"Value error in data file: {e}")
+                return {}
+        return {}
+
+    def save_data(self, data_to_save):
+        import time
+        try:
+            # Prepare data
+            json_str = json.dumps(data_to_save, indent=4, ensure_ascii=False)
+            
+            # 1. Integrity: Calculate and Save Hash
+            data_hash = hashlib.sha256(json_str.encode('utf-8')).hexdigest()
+            hash_file = self.data_file + ".sha256"
+            with open(hash_file, 'w', encoding='utf-8') as f:
+                f.write(data_hash)
+
+            # 2. Atomic Write with Retry (Hardened for Windows 🛠️)
+            tmp_file = self.data_file + ".tmp"
+            with open(tmp_file, 'w', encoding='utf-8') as f:
+                f.write(json_str)
+            
+            # Atomic swap with retries for "Permission Denied"
+            retries = 3
+            for i in range(retries):
+                try:
+                    if os.path.exists(self.data_file):
+                        os.replace(tmp_file, self.data_file)
+                    else:
+                        os.rename(tmp_file, self.data_file)
+                    break
+                except PermissionError as e:
+                    if i == retries - 1:
+                        logging.error(f"Final attempt failed to save data (Permission Error): {e}")
+                        raise
+                    logging.warning(f"Save retry {i+1} due to permission error: {e}")
+                    time.sleep(0.5) # Wait for antivirus/indexer to release handle
+            
+            # Backup after successful save
+            self.backup_data()
+            
+        except (IOError, OSError) as e:
+            logging.exception(f"Error saving data: {e}")
+
+    def backup_data(self):
+        """Create a rotating backup of the data file."""
+        if not os.path.exists(self.data_file):
+            return
+            
+        try:
+            backup_dir = os.path.join(self.config_dir, 'backups')
+            os.makedirs(backup_dir, exist_ok=True)
+            
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_path = os.path.join(backup_dir, f"bill_data_{timestamp}.json")
+            
+            shutil.copy2(self.data_file, backup_path)
+            
+            # Rotate: Keep last 5
+            backups = sorted([os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.startswith('bill_data_')])
+            while len(backups) > 5:
+                os.remove(backups.pop(0))
+        except Exception as e:
+            logging.error(f"Backup failed: {e}")
+
+    def save_rates_cache(self, rates_data):
+        try:
+            cache_file = os.path.join(self.config_dir, 'rates_cache.json')
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(rates_data, f, indent=2)
+        except IOError:
+            pass
+
+    def load_rates_cache(self):
+        try:
+            cache_file = os.path.join(self.config_dir, 'rates_cache.json')
+            if os.path.exists(cache_file):
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except (IOError, json.JSONDecodeError):
+            return None
+        return None
+
+
+class APIThread(QThread):
+    """Background thread for fetching currency rates."""
+    finished = pyqtSignal(dict)
+
+    def run(self):
+        primary_url = "https://api.exchangerate.host/latest?base=USD"
+        fallback_url = "https://open.er-api.com/v6/latest/USD"
+        
+        try:
+            ctx = ssl.create_default_context()
+            with urllib.request.urlopen(primary_url, context=ctx, timeout=10) as response:
+                if response.status == 200:
+                    content = response.read().decode('utf-8')
+                    data = json.loads(content)
+                    if 'rates' in data and isinstance(data['rates'], dict) and data['rates']:
+                        normalized = {'conversion_rates': data['rates'], 'base_code': data.get('base', 'USD')}
+                        self.finished.emit({'status': 'success', 'data': normalized})
+                        return
+        except (urllib.error.URLError, json.JSONDecodeError, ssl.SSLError, TimeoutError) as e:
+            logging.warning(f"Primary API request failed: {e}")
+
+        # Fallback
+        try:
+            ctx = ssl.create_default_context()
+            with urllib.request.urlopen(fallback_url, context=ctx, timeout=10) as response:
+                if response.status == 200:
+                    content = response.read().decode('utf-8')
+                    data = json.loads(content)
+                    if 'rates' in data and isinstance(data['rates'], dict) and data['rates']:
+                        normalized = {'conversion_rates': data['rates'], 'base_code': data.get('base_code', 'USD')}
+                        self.finished.emit({'status': 'success', 'data': normalized})
+                        return
+        except (urllib.error.URLError, json.JSONDecodeError, ssl.SSLError, TimeoutError) as e:
+            logging.warning(f"Fallback API request failed: {e}")
+
+        self.finished.emit({'status': 'error', 'message': STRINGS["network_error"]})
+
+
+def get_currency_list():
+    """Returns dictionary of currency display strings to symbols."""
+    return {
+        '$ (USD)': '$', '€ (EUR)': '€', '£ (GBP)': '£', '¥ (JPY)': '¥', 'C$ (CAD)': 'C$',
+        'A$ (AUD)': 'A$', '₹ (INR)': '₹', '₽ (RUB)': '₽', '₩ (KRW)': '₩', '₽ (CNY)': '¥',
+        'R$ (BRL)': 'R$', 'CHF (CHF)': 'CHF', 'kr (SEK)': 'kr', 'kr (NOK)': 'kr', 'kr (DKK)': 'kr',
+        'kr (ISK)': 'kr', 'zł (PLN)': 'zł', 'Kč (CZK)': 'Kč', 'Ft (HUF)': 'Ft', 'lei (RON)': 'lei',
+        '₪ (ILS)': '₪', '₼ (AZN)': '₼', '₼ (AZN)': '₼', '₺ (TRY)': '₺', '₱ (PHP)': '₱',
+        'Rp (IDR)': 'Rp', 'RM (MYR)': 'RM', 'S$ (SGD)': 'S$', 'NZ$ (NZD)': 'NZ$', 'HK$ (HKD)': 'HK$',
+        'NT$ (TWD)': 'NT$', 'Bs. (BOB)': 'Bs.', '₡ (CRC)': '₡', 'RD$ (DOP)': 'RD$', '$ (MXN)': '$',
+        '฿ (THB)': '฿', '₫ (VND)': '₫', 'Rp (IDR)': 'Rp', '$ (ARS)': '$', 'S/. (PEN)': 'S/.',
+        '₦ (NGN)': '₦', '₨ (PKR)': '₨', '₨ (INR)': '₹', 'Br (ETB)': 'Br', 'KSh (KES)': 'KSh',
+        'R (ZAR)': 'R', 'Fdj (DJF)': 'Fdj', 'ر.ع. (AED)': 'د.إ', '﷼ (SAR)': '﷼', 'د (KWD)': 'د.ك',
+        'ر (QAR)': 'ر.ق', '﷼ (IRR)': '﷼', 'D (GMD)': 'D', 'Le (SLL)': 'Le'
+    }
+
+
+class LazyCombo(_QComboBox):
+    """QComboBox that populates items lazily on first showPopup to speed startup."""
+    def __init__(self, items_provider=None, pending_text=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._items_provider = items_provider
+        self._populated = False
+        self._pending_text = pending_text
+
+    def showPopup(self):
+        if not self._populated and self._items_provider:
+            items = self._items_provider()
+            if items:
+                self.addItems(items)
+            self._populated = True
+            if self._pending_text:
+                # try to set pending selection if provided
+                try:
+                    self.setCurrentText(self._pending_text)
+                except Exception:
+                    pass
+    def ensure_populated(self):
+        """Force population of items without showing popup."""
+        if not self._populated and self._items_provider:
+            items = self._items_provider()
+            if items:
+                self.addItems(items)
+            self._populated = True
+
+
+class CurrencySelectorDialog(QDialog):
+    """Searchable currency selector dialog."""
+    def __init__(self, parent, currencies, current_currency=None):
+        super().__init__(parent)
+        self.setWindowTitle(STRINGS["title_select_currency"])
+        self.setGeometry(100, 100, 400, 500)
+        self.currencies = currencies
+        self.selected_currency = current_currency
+        
+        layout = QVBoxLayout()
+        
+        # Search input
+        search_label = QLabel(STRINGS["label_search_currency"])
+        layout.addWidget(search_label)
+        self.search_input = QLineEdit()
+        self.search_input.textChanged.connect(self.filter_currencies)
+        layout.addWidget(self.search_input)
+        
+        # Currency list
+        self.currency_list = QListWidget()
+        self.currency_list.itemDoubleClicked.connect(self.select_currency)
+        layout.addWidget(self.currency_list)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton(STRINGS["btn_ok"])
+        ok_button.clicked.connect(self.on_ok)
+        cancel_button = QPushButton(STRINGS["btn_cancel"])
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+        self.populate_list()
+        self.search_input.setFocus()
+    
+    def populate_list(self, filter_text=""):
+        self.currency_list.clear()
+        filter_lower = filter_text.lower()
+        
+        for currency in self.currencies.keys():
+            code = currency.split('(')[-1].replace(')', '').strip()
+            name = CURRENCY_FULL_NAMES.get(code, '')
+            
+            # Search in code, symbol, and name
+            if (filter_lower == "" or 
+                filter_lower in currency.lower() or 
+                filter_lower in code.lower() or 
+                filter_lower in name.lower()):
+                item = QListWidgetItem(f"{currency} - {name}")
+                item.setData(Qt.ItemDataRole.UserRole, currency)
+                self.currency_list.addItem(item)
+    
+    def filter_currencies(self):
+        self.populate_list(self.search_input.text())
+    
+    def select_currency(self, item):
+        self.selected_currency = item.data(Qt.ItemDataRole.UserRole)
+        self.accept()
+    
+    def on_ok(self):
+        current_item = self.currency_list.currentItem()
+        if current_item:
+            self.selected_currency = current_item.data(Qt.ItemDataRole.UserRole)
+            self.accept()
+        else:
+            # No item selected, just close dialog without changing the selection
+            self.reject()
+    
+    def get_selected_currency(self):
+        return self.selected_currency
+
+
+def get_cached_icon(path):
+    """Return cached QIcon/QPixmap for path; simple cache to avoid repeated disk loads."""
+    from PyQt6.QtGui import QIcon, QPixmap
+    if not hasattr(get_cached_icon, '_cache'):
+        get_cached_icon._cache = {}
+    cache = get_cached_icon._cache
+    if path in cache:
+        return cache[path]
+    try:
+        pix = QPixmap(path)
+        icon = QIcon(pix)
+        cache[path] = icon
+        return icon
+    except Exception:
+        return None
+
+
+class BillEditorDialog(QDialog):
+    """Dialog for editing a bill."""
+    def __init__(self, parent, bill, currencies):
+        super().__init__(parent)
+        self.bill = bill
+        self.currencies = currencies
+        self.setWindowTitle(STRINGS["edit_bill_title"])
+        self.setGeometry(100, 100, 450, 350)
+        
+        layout = QFormLayout()
+        
+        self.name_input = QLineEdit(bill['name'])
+        layout.addRow(STRINGS["bill_name_label"] + ":", self.name_input)
+        
+        self.amount_input = QLineEdit(str(bill['amount']))
+        layout.addRow(STRINGS["amount_label"] + ":", self.amount_input)
+        
+        # Currency with search button
+        currency_layout = QHBoxLayout()
+        self.currency_combo = QComboBox()
+        self.currency_combo.addItems(list(currencies.keys()))
+        self.currency_combo.setCurrentText(bill['currency'])
+        currency_layout.addWidget(self.currency_combo)
+        
+        search_currency_btn = QPushButton(STRINGS["btn_search"])
+        search_currency_btn.clicked.connect(self.open_currency_selector)
+        currency_layout.addWidget(search_currency_btn)
+        layout.addRow(STRINGS["currency_label"] + ":", currency_layout)
+        
+
+        
+        self.category_combo = QComboBox()
+        self.category_combo.addItems(CATEGORIES)
+        self.category_combo.setCurrentText(get_display_category(bill.get('category', 'Other')))
+        layout.addRow(STRINGS["category_label"] + ":", self.category_combo)
+        
+        self.repeat_combo = QComboBox()
+        self.repeat_combo.addItems(FREQUENCIES)
+        self.repeat_combo.setCurrentText(get_display_frequency(bill.get('repeat_freq', 'No Repeat')))
+        layout.addRow(STRINGS["repeat_label"] + ":", self.repeat_combo)
+        
+        self.date_input = QDateEdit()
+        try:
+            due_date = datetime.strptime(bill['due_date'], '%Y-%m-%d').date()
+            self.date_input.setDate(QDate(due_date.year, due_date.month, due_date.day))
+        except:
+            self.date_input.setDate(QDate.currentDate())
+        layout.addRow(STRINGS["due_date_label"] + ":", self.date_input)
+        
+        save_button = QPushButton(STRINGS["save_changes_button"])
+        save_button.clicked.connect(self.accept)
+        layout.addRow(save_button)
+        
+        self.setLayout(layout)
+    
+    def open_currency_selector(self):
+        dialog = CurrencySelectorDialog(self, self.currencies, self.currency_combo.currentText())
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected = dialog.get_selected_currency()
+            if selected:
+                self.currency_combo.setCurrentText(selected)
+    
+    def get_data(self):
+        try:
+            amount = strict_float(self.amount_input.text()) # Hardened
+            if amount <= 0:
+                raise ValueError
+            if amount > 1000000000: # 1 Billion limit
+                QMessageBox.warning(self, STRINGS["dialog_input_error"], STRINGS["msg_amount_large"])
+                return None
+        except ValueError:
+            QMessageBox.warning(self, STRINGS["dialog_input_error"], STRINGS["error_positive_amount"])
+            return None
+        
+        return {
+            'name': sanitize_input(self.name_input.text()), # Hardened
+            'amount': amount,
+            'currency': self.currency_combo.currentText(),
+            'category': get_canonical_category(self.category_combo.currentText()),
+            'repeat_freq': get_canonical_frequency(self.repeat_combo.currentText()),
+            'due_date': self.date_input.date().toString('yyyy-MM-dd')
+        }
+
+
+class ConverterWindow(QDialog):
+    """Currency converter dialog."""
+    def __init__(self, parent, currencies, exchange_rates):
+        super().__init__(parent)
+        self.currencies = currencies
+        self.exchange_rates = exchange_rates
+        self.setWindowTitle(STRINGS["converter_title"])
+        self.setGeometry(100, 100, 400, 300)
+        
+        layout = QVBoxLayout()
+        
+        # Amount input
+        layout.addWidget(QLabel(STRINGS["amount_label"] + ":"))
+        self.amount_input = QLineEdit("1.00")
+        layout.addWidget(self.amount_input)
+        
+        # From currency
+        layout.addWidget(QLabel(STRINGS["from_label"] + ":"))
+        from_layout = QHBoxLayout()
+        self.from_combo = QComboBox()
+        self.from_combo.addItems(list(currencies.keys()))
+        self.from_combo.setCurrentText('$ (USD)')
+        from_layout.addWidget(self.from_combo)
+        
+        from_search_btn = QPushButton("🔍")
+        from_search_btn.setFixedWidth(40)
+        from_search_btn.clicked.connect(lambda: self.open_currency_search(self.from_combo))
+        from_layout.addWidget(from_search_btn)
+        layout.addLayout(from_layout)
+        
+        # To currency
+        layout.addWidget(QLabel(STRINGS["to_label"] + ":"))
+        to_layout = QHBoxLayout()
+        self.to_combo = QComboBox()
+        self.to_combo.addItems(list(currencies.keys()))
+        self.to_combo.setCurrentText('€ (EUR)')
+        to_layout.addWidget(self.to_combo)
+        
+        to_search_btn = QPushButton("🔍")
+        to_search_btn.setFixedWidth(40)
+        to_search_btn.clicked.connect(lambda: self.open_currency_search(self.to_combo))
+        to_layout.addWidget(to_search_btn)
+        layout.addLayout(to_layout)
+        
+        # Result
+        self.result_label = QLabel("0.00")
+        result_font = QFont()
+        result_font.setPointSize(14)
+        result_font.setBold(True)
+        self.result_label.setFont(result_font)
+        layout.addWidget(self.result_label)
+        
+        # Convert button
+        convert_button = QPushButton(STRINGS["convert_button"])
+        convert_button.clicked.connect(self.perform_conversion)
+        layout.addWidget(convert_button)
+        
+        copy_button = QPushButton(STRINGS["btn_copy_result"])
+        copy_button.clicked.connect(self.copy_result)
+        layout.addWidget(copy_button)
+        
+        self.setLayout(layout)
+    
+    def perform_conversion(self):
+        try:
+            amount = strict_float(self.amount_input.text()) # Hardened
+            from_curr = self.from_combo.currentText()
+            to_curr = self.to_combo.currentText()
+            
+            from_rate = self.exchange_rates.get(from_curr, 1)
+            to_rate = self.exchange_rates.get(to_curr, 1)
+            
+            if from_rate > 0:
+                result = (amount / from_rate) * to_rate
+                symbol = self.currencies.get(to_curr, '$')
+                self.result_label.setText(f"{symbol}{result:,.2f}")
+            else:
+                self.result_label.setText(STRINGS["title_error"])
+        except ValueError:
+            self.result_label.setText(STRINGS["invalid_input"])
+
+    def copy_result(self):
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.result_label.text())
+        QMessageBox.information(self, STRINGS["title_copied"], STRINGS["msg_copied"])
+
+    def open_currency_search(self, combo_box):
+        """Open searchable currency selector for a combo box."""
+        dialog = CurrencySelectorDialog(self, self.currencies, combo_box.currentText())
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected = dialog.get_selected_currency()
+            if selected:
+                combo_box.setCurrentText(selected)
+
+
+class BillDetailsDialog(QDialog):
+    """Dialog to show bill details and actions."""
+    def __init__(self, parent, bill, currencies, is_paid=False):
+        super().__init__(parent)
+        self.setWindowTitle(STRINGS["menu_view_details"])
+        self.setGeometry(100, 100, 400, 350)
+        
+        layout = QVBoxLayout()
+        
+        # Details Form
+        form = QFormLayout()
+        
+        # Name
+        name_label = QLabel(bill['name'])
+        font = QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        name_label.setFont(font)
+        form.addRow(STRINGS["header_name"] + ":", name_label)
+        
+        # Amount
+        symbol = currencies.get(bill['currency'], '$')
+        amount_label = QLabel(f"{symbol}{bill['amount']:,.2f}")
+        amount_label.setFont(font)
+        form.addRow(STRINGS["header_amount"] + ":", amount_label)
+        
+        # Category
+        cat_display = get_display_category(bill.get('category', 'Other'))
+        form.addRow(STRINGS["header_category"] + ":", QLabel(cat_display))
+        
+        # Date
+        date_label = STRINGS["header_paid_date"] if is_paid else STRINGS["header_due_date"]
+        form.addRow(date_label + ":", QLabel(bill.get('due_date', '-')))
+        
+        # Frequency
+        freq_display = get_display_frequency(bill.get('repeat_freq', 'No Repeat'))
+        form.addRow(STRINGS["header_frequency"] + ":", QLabel(freq_display))
+        
+        # Status
+        status_text = STRINGS["status_paid"] if is_paid else STRINGS["status_unpaid"]
+        status_label = QLabel(status_text)
+        if not is_paid:
+            status_label.setStyleSheet("color: #e63946; font-weight: bold;")
+        else:
+            status_label.setStyleSheet("color: #2a9d8f; font-weight: bold;")
+        form.addRow(STRINGS["header_status"] + ":", status_label)
+        
+        layout.addLayout(form)
+        
+        layout.addSpacing(20)
+        
+        # Actions
+        self.action_code = 0
+        btn_layout = QHBoxLayout()
+        
+        if not is_paid:
+            pay_btn = QPushButton(STRINGS["menu_pay_bill"])
+            pay_btn.clicked.connect(lambda: self.done_action(1)) # 1 = Pay
+            btn_layout.addWidget(pay_btn)
+            
+            edit_btn = QPushButton(STRINGS["menu_edit_bill"])
+            edit_btn.clicked.connect(lambda: self.done_action(2)) # 2 = Edit
+            btn_layout.addWidget(edit_btn)
+        
+        delete_btn = QPushButton(STRINGS["menu_delete_bill"])
+        delete_btn.setStyleSheet("background-color: #e63946; color: white;")
+        delete_btn.clicked.connect(lambda: self.done_action(3)) # 3 = Delete
+        btn_layout.addWidget(delete_btn)
+        
+        layout.addLayout(btn_layout)
+        
+        close_btn = QPushButton(STRINGS["btn_cancel"])
+        close_btn.clicked.connect(self.reject)
+        layout.addWidget(close_btn)
+        
+        self.setLayout(layout)
+
+    def done_action(self, code):
+        self.action_code = code
+        self.accept()
+    
+    def get_action(self):
+        return self.action_code
+
+
+class SettingsDialog(QDialog):
+    """Settings dialog."""
+    def __init__(self, parent, data_manager):
+        super().__init__(parent)
+        self.data_manager = data_manager
+        self.setWindowTitle(STRINGS["settings_title"])
+        self.setGeometry(100, 100, 500, 200)
+        
+        layout = QFormLayout()
+        
+        # Data file path
+        path_layout = QHBoxLayout()
+        self.path_input = QLineEdit(data_manager.data_file)
+        self.path_input.setReadOnly(True)
+        path_layout.addWidget(self.path_input)
+        
+        browse_button = QPushButton(STRINGS["browse_button"])
+        browse_button.clicked.connect(self.browse_file)
+        path_layout.addWidget(browse_button)
+        
+        layout.addRow(STRINGS["data_file_group_title"] + ":", path_layout)
+        
+
+
+        # Create Start with Windows checkbox
+        self.start_boot_chk = QCheckBox(STRINGS["chk_start_windows"])
+        self.start_boot_chk.setChecked(self.is_run_on_startup())
+        layout.addRow(self.start_boot_chk)
+        
+        # Create Minimize to Tray checkbox (saved in config)
+        self.tray_chk = QCheckBox(STRINGS["chk_minimize_tray"])
+        config = self.data_manager.load_config()
+        self.tray_chk.setChecked(config.get('minimize_to_tray', True))
+        layout.addRow(self.tray_chk)
+
+        # Reminder Days Setting
+        reminder_layout = QHBoxLayout()
+        self.reminder_days_spin = QSpinBox()
+        self.reminder_days_spin.setRange(0, 30)
+        self.reminder_days_spin.setRange(0, 30)
+        self.reminder_days_spin.setValue(config.get('reminder_days', 1))
+        self.reminder_days_spin.setSuffix(STRINGS["suffix_days_advance"])
+        reminder_layout.addWidget(QLabel(STRINGS["label_notify_me"]))
+        reminder_layout.addWidget(self.reminder_days_spin)
+        layout.addRow(reminder_layout)
+
+        # Save button
+        save_button = QPushButton(STRINGS["btn_save_settings"])
+        save_button.clicked.connect(self.save_settings)
+        layout.addRow(save_button)
+        
+        # Backup Manager Section
+        backup_group = QGroupBox(STRINGS["group_backup_restore"])
+        backup_layout = QVBoxLayout()
+        
+        # Backup List
+        self.backup_list = QListWidget()
+        self.backup_list.setFixedHeight(100)
+        self.load_backups()
+        backup_layout.addWidget(self.backup_list)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        create_backup_btn = QPushButton(STRINGS["btn_create_backup"])
+        create_backup_btn.clicked.connect(self.create_manual_backup)
+        btn_layout.addWidget(create_backup_btn)
+        
+        restore_btn = QPushButton(STRINGS["btn_restore_selected"])
+        restore_btn.clicked.connect(self.restore_selected_backup)
+        btn_layout.addWidget(restore_btn)
+        
+        delete_btn = QPushButton(STRINGS["btn_delete_selected"])
+        delete_btn.clicked.connect(self.delete_selected_backup)
+        btn_layout.addWidget(delete_btn)
+        
+        backup_layout.addLayout(btn_layout)
+        backup_group.setLayout(backup_layout)
+        layout.addRow(backup_group)
+        
+        # Danger Zone
+        danger_group = QGroupBox(STRINGS["group_danger_zone"])
+        danger_layout = QVBoxLayout()
+        clear_btn = QPushButton(STRINGS["btn_clear_all_data"])
+        clear_btn.setStyleSheet("background-color: #ff4d4d; color: white; font-weight: bold;")
+        clear_btn.clicked.connect(self.clear_all_data)
+        danger_layout.addWidget(clear_btn)
+        danger_group.setLayout(danger_layout)
+        layout.addRow(danger_group)
+        
+        # Language Settings
+        lang_group = QGroupBox(STRINGS["lang_group_title"])
+        lang_layout = QHBoxLayout()
+        self.lang_combo = QComboBox()
+        self.lang_combo.addItems(["English", "Georgian"])
+        
+        # Set current selection
+        current_lang = config.get('language', 'English')
+        self.lang_combo.setCurrentText(current_lang)
+        
+        lang_layout.addWidget(QLabel(STRINGS["lang_group_title"] + ":"))
+        lang_layout.addWidget(self.lang_combo)
+        lang_group.setLayout(lang_layout)
+        layout.addRow(lang_group)
+        
+        self.setLayout(layout)
+
+    def load_backups(self):
+        self.backup_list.clear()
+        backup_dir = os.path.join(self.data_manager.config_dir, 'backups')
+        if os.path.exists(backup_dir):
+            backups = sorted([f for f in os.listdir(backup_dir) if f.startswith('bill_data_')], reverse=True)
+            self.backup_list.addItems(backups)
+            
+    def create_manual_backup(self):
+        try:
+            self.data_manager.backup_data()
+            self.load_backups()
+            QMessageBox.information(self, STRINGS["title_backup_created"], STRINGS["msg_backup_created"])
+        except Exception as e:
+            QMessageBox.critical(self, STRINGS["title_error"], STRINGS["msg_backup_failed"].format(e))
+            
+    def restore_selected_backup(self):
+        selected = self.backup_list.currentItem()
+        if not selected:
+            QMessageBox.warning(self, STRINGS["title_selection_required"], STRINGS["msg_select_backup"])
+            return
+            
+        filename = selected.text()
+        backup_path = os.path.join(self.data_manager.config_dir, 'backups', filename)
+        
+        reply = QMessageBox.question(self, STRINGS["title_confirm_restore"], 
+                                   STRINGS["msg_confirm_restore"].format(filename),
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                shutil.copy2(backup_path, self.data_manager.data_file)
+                QMessageBox.information(self, STRINGS["title_restored"], STRINGS["msg_restored"])
+                if hasattr(self.parent(), 'load_data'):
+                    self.parent().load_data()
+                    self.parent().update_display()
+            except Exception as e:
+                QMessageBox.critical(self, STRINGS["title_restore_failed"], STRINGS["msg_restore_error"].format(e))
+
+    def delete_selected_backup(self):
+        selected = self.backup_list.currentItem()
+        if not selected:
+            QMessageBox.warning(self, STRINGS["title_selection_required"], STRINGS["msg_select_backup"])
+            return
+            
+        filename = selected.text()
+        backup_path = os.path.join(self.data_manager.config_dir, 'backups', filename)
+        
+        reply = QMessageBox.question(self, STRINGS["title_confirm_delete_backup"], 
+                                   STRINGS["msg_confirm_delete_backup"].format(filename),
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                if os.path.exists(backup_path):
+                    os.remove(backup_path)
+                    QMessageBox.information(self, STRINGS["title_data_cleared"], STRINGS["msg_backup_deleted"])
+                    self.load_backups()
+            except Exception as e:
+                logging.error(f"Failed to delete backup: {e}")
+                QMessageBox.critical(self, STRINGS["title_error"], f"Error: {e}")
+
+    def clear_all_data(self):
+        """Clear all application data."""
+        reply = QMessageBox.question(self, STRINGS["title_clear_all_data"], 
+                                   STRINGS["msg_confirm_clear_1"],
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            confirm = QMessageBox.question(self, STRINGS["title_double_confirm"], 
+                                         STRINGS["msg_confirm_clear_2"],
+                                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if confirm == QMessageBox.StandardButton.Yes:
+                try:
+                    # Create a backup first just in case
+                    self.data_manager.backup_data()
+                    
+                    # Reset data
+                    empty_data = {
+                        "budget": 0.0,
+                        "unpaid_bills": [],
+                        "paid_bills": [],
+                        "budget_currency": "$ (USD)",
+                        "bill_currency": "$ (USD)",
+                        "summary_currency": "$ (USD)"
+                    }
+                    self.data_manager.save_data(empty_data)
+                    QMessageBox.information(self, STRINGS["title_data_cleared"], STRINGS["msg_data_cleared_restart"])
+                    if hasattr(self.parent(), 'load_data'):
+                        self.parent().load_data()
+                        self.parent().update_display()
+                except Exception as e:
+                    QMessageBox.critical(self, "Error", f"Failed to clear data: {e}")
+    
+    def browse_file(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Choose data file", "", "JSON Files (*.json)")
+        if file_path:
+            self.path_input.setText(file_path)
+            # We don't save immediately here to allow 'Save' button to handle everything
+            
+    def save_settings(self):
+        # 1. Save Data Path (with validation)
+        new_path = self.path_input.text()
+        if new_path and new_path != self.data_manager.data_file:
+            # Validate path for security
+            if not validate_file_path(new_path):
+                QMessageBox.warning(self, "Invalid Path", 
+                    "For security reasons, data files must be stored in your user directory.\n"
+                    "System directories are not allowed.")
+                return
+            
+            self.data_manager.data_file = new_path
+            # We update config immediately for path
+            path_config = self.data_manager.load_config()
+            path_config['data_file_path'] = new_path
+            self.data_manager.save_config(path_config)
+
+        # 2. Update Main Config (Tray, Reminder, Language)
+        config = self.data_manager.load_config()
+        config['minimize_to_tray'] = self.tray_chk.isChecked()
+        config['reminder_days'] = self.reminder_days_spin.value()
+        
+        # Handle Language Change
+        selected_lang = self.lang_combo.currentText()
+        if selected_lang != config.get('language', 'English'):
+            config['language'] = selected_lang
+            QMessageBox.information(self, STRINGS["title_restart_required"], STRINGS["lang_restart_msg"])
+            
+        self.data_manager.save_config(config)
+
+        # 3. Save Registry (Startup)
+        try:
+            self.set_run_on_startup(self.start_boot_chk.isChecked())
+        except PermissionError:
+            QMessageBox.warning(self, "Permission Denied", 
+                "Administrator rights required to modify startup settings.")
+        except Exception as e:
+            QMessageBox.critical(self, STRINGS["title_error"], 
+                f"Failed to update startup settings: {str(e)}")
+        
+        self.accept()
+
+    def is_run_on_startup(self):
+        """Check if app runs on startup (cross-platform)."""
+        system = platform.system()
+        
+        if system == 'Windows':
+            try:
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_READ)
+                winreg.QueryValueEx(key, "BillTracker")
+                key.Close()
+                return True
+            except FileNotFoundError:
+                return False
+            except Exception as e:
+                logging.error(f"Registry check error: {e}")
+                return False
+            finally:
+                try: key.Close()
+                except: pass
+        
+        elif system == 'Darwin':  # macOS
+            plist_path = os.path.expanduser('~/Library/LaunchAgents/com.grouvya.billtracker.plist')
+            return os.path.exists(plist_path)
+        
+        elif system == 'Linux':
+            desktop_path = os.path.expanduser('~/.config/autostart/billtracker.desktop')
+            return os.path.exists(desktop_path)
+        
+        return False
+
+    def set_run_on_startup(self, enable):
+        """Set app to run on startup (cross-platform)."""
+        system = platform.system()
+        
+        if system == 'Windows':
+            try:
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+                try:
+                    if enable:
+                        app_path = sys.executable if getattr(sys, 'frozen', False) else sys.argv[0]
+                        winreg.SetValueEx(key, "BillTracker", 0, winreg.REG_SZ, app_path)
+                    else:
+                        try:
+                            winreg.DeleteValue(key, "BillTracker")
+                        except FileNotFoundError:
+                            pass
+                finally:
+                    key.Close()
+            except Exception as e:
+                logging.error(f"Registry write error: {e}")
+        
+        elif system == 'Darwin':  # macOS
+            plist_dir = os.path.expanduser('~/Library/LaunchAgents')
+            plist_path = os.path.join(plist_dir, 'com.grouvya.billtracker.plist')
+            
+            if enable:
+                os.makedirs(plist_dir, exist_ok=True)
+                app_path = sys.executable if getattr(sys, 'frozen', False) else sys.argv[0]
+                plist_content = f'''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.grouvya.billtracker</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{app_path}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>'''
+                try:
+                    with open(plist_path, 'w') as f:
+                        f.write(plist_content)
+                except Exception as e:
+                    logging.error(f"macOS startup file error: {e}")
+            else:
+                try:
+                    if os.path.exists(plist_path):
+                        os.remove(plist_path)
+                except Exception as e:
+                    logging.error(f"macOS startup file removal error: {e}")
+        
+        elif system == 'Linux':
+            autostart_dir = os.path.expanduser('~/.config/autostart')
+            desktop_path = os.path.join(autostart_dir, 'billtracker.desktop')
+            
+            if enable:
+                os.makedirs(autostart_dir, exist_ok=True)
+                app_path = sys.executable if getattr(sys, 'frozen', False) else sys.argv[0]
+                desktop_content = f'''[Desktop Entry]
+Type=Application
+Name=BillTracker
+Exec={app_path}
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Comment=Personal Finance Manager'''
+                try:
+                    with open(desktop_path, 'w') as f:
+                        f.write(desktop_content)
+                    os.chmod(desktop_path, 0o755)  # Make executable
+                except Exception as e:
+                    logging.error(f"Linux startup file error: {e}")
+            else:
+                try:
+                    if os.path.exists(desktop_path):
+                        os.remove(desktop_path)
+                except Exception as e:
+                    logging.error(f"Linux startup file removal error: {e}")
+
+
+
+
+class ChartWidget(QWidget):
+    """Simple Pie Chart Widget."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.data = {} # label: value
+        self.colors = [
+            QColor("#3a86ff"), QColor("#ff006e"), QColor("#8338ec"), 
+            QColor("#fb5607"), QColor("#ffbe0b"), QColor("#3a0ca3"),
+            QColor("#17c3b2"), QColor("#e63946")
+        ]
+        self.setMinimumSize(300, 300)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        save_action = menu.addAction(STRINGS["legend_save_image"])
+        action = menu.exec(event.globalPos())
+        if action == save_action:
+            self.save_image()
+
+    def save_image(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, STRINGS["title_save_chart"], "chart.png", "Images (*.png *.jpg *.bmp)")
+        if file_path:
+            pixmap = self.grab()
+            pixmap.save(file_path)
+            QMessageBox.information(self, STRINGS["title_saved"], STRINGS["msg_chart_saved"].format(file_path))
+
+    def set_data(self, data):
+        self.data = {k: v for k, v in data.items() if v > 0}
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Determine if dark mode via palette or just default text color
+        # In QSS, text color is white/black. Let's check window text.
+        is_dark = self.palette().color(QPalette.ColorRole.WindowText).lightness() > 128
+        
+        rect = self.rect()
+        total = sum(self.data.values())
+        if total == 0:
+            painter.setPen(QColor("#888888"))
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "No Data")
+            return
+
+        # Draw Pie
+        start_angle = 90 * 16
+        center = rect.center()
+        radius = min(rect.width(), rect.height()) // 2 - 40
+        pie_rect = QRectF(center.x() - radius, center.y() - radius, radius * 2, radius * 2)
+        
+        i = 0
+        for label, value in self.data.items():
+            span_angle = int((value / total) * 360 * 16)
+            painter.setBrush(self.colors[i % len(self.colors)])
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawPie(pie_rect, start_angle, span_angle)
+            start_angle -= span_angle # Move counter-clockwise
+            i += 1
+            
+        # Legend (Simple)
+        legend_y = 10
+        painter.setPen(QColor("#ffffff") if is_dark else QColor("#000000"))
+        i = 0
+        for label, value in self.data.items():
+            if legend_y > rect.height() - 20: break
+            painter.setBrush(self.colors[i % len(self.colors)])
+            painter.drawRect(10, legend_y, 10, 10)
+            painter.drawText(25, legend_y + 10, f"{label}: {value:,.2f}")
+            legend_y += 20
+            i += 1
+
+
+class TrendsWidget(QWidget):
+    """Bar Chart for Spending History."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.data = {} # label: value
+        self.setMinimumSize(300, 200)
+
+    def set_data(self, data):
+        self.data = data
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = self.rect()
+        
+        is_dark = self.palette().color(QPalette.ColorRole.WindowText).lightness() > 128
+        text_color = QColor("#ffffff") if is_dark else QColor("#000000")
+        
+        if not self.data:
+            painter.setPen(QColor("#888888"))
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "No History Data")
+            return
+
+        max_val = max(self.data.values()) if self.data else 1
+        count = len(self.data)
+        bar_width = (rect.width() - (count * 10)) / max(1, count)
+        x = 5
+        
+        # Sort by date key (assuming YYYY-MM)
+        sorted_keys = sorted(self.data.keys())[-6:] # Last 6 months
+        
+        for key in sorted_keys:
+            val = self.data[key]
+            h = (val / max_val) * (rect.height() - 40)
+            
+            # Bar
+            painter.setBrush(QColor("#8338ec"))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRect(int(x), int(rect.height() - h - 20), int(bar_width), int(h))
+            
+            # Label - safely extract month
+            painter.setPen(text_color)
+            parts = key.split('-')
+            month_label = parts[1] if len(parts) >= 2 else key[:3]
+            painter.drawText(QRect(int(x), int(rect.height() - 20), int(bar_width), 20), 
+                           Qt.AlignmentFlag.AlignCenter, month_label)
+            
+            x += bar_width + 10
+
+class BillCalendar(QCalendarWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.bills = [] # list of dicts
+
+    def set_bills(self, bills):
+        self.bills = bills
+        self.updateCells()
+
+    def paintCell(self, painter, rect, date):
+        super().paintCell(painter, rect, date)
+        dt = date.toString("yyyy-MM-dd")
+        
+        # Check for bills
+        bills_on_day = [b for b in self.bills if b.get('due_date') == dt]
+        if bills_on_day:
+            painter.save()
+            painter.setBrush(QColor(255, 0, 0, 50)) # Red tint
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRect(rect)
+            
+            # Small dot
+            painter.setBrush(QColor("#ff0000"))
+            painter.drawEllipse(rect.center(), 3, 3)
+            painter.restore()
+
+
+class SplashScreen(QWidget):
+    """Modern loading screen with progress indicator."""
+    def __init__(self):
+        super().__init__()
+        self.setWindowFlags(Qt.WindowType.SplashScreen | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(400, 250)
+        
+        # Center on screen
+        screen = QApplication.primaryScreen().geometry()
+        self.move((screen.width() - self.width()) // 2, (screen.height() - self.height()) // 2)
+        
+        # Main layout
+        layout = QVBoxLayout()
+        layout.setContentsMargins(30, 30, 30, 30)
+        
+        # Background container
+        container = QWidget()
+        container.setStyleSheet("""
+            QWidget {
+                background-color: rgba(30, 30, 30, 240);
+                border-radius: 15px;
+            }
+        """)
+        container_layout = QVBoxLayout()
+        container_layout.setSpacing(20)
+        
+        # App logo/title
+        title = QLabel("💰 BillTracker")
+        title.setStyleSheet("font-size: 36px; font-weight: bold; color: #8338ec; background: transparent;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Version
+        version = QLabel(f"v{__version__}")
+        version.setStyleSheet("font-size: 14px; color: #aaaaaa; background: transparent;")
+        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Loading message
+        self.message = QLabel("Initializing / მომზადება...")
+        self.message.setStyleSheet("font-size: 14px; color: #ffffff; background: transparent;")
+        self.message.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Progress bar
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        self.progress.setTextVisible(False)
+        self.progress.setStyleSheet("""
+            QProgressBar {
+                border: none;
+                border-radius: 5px;
+                background-color: rgba(255, 255, 255, 0.1);
+                height: 8px;
+            }
+            QProgressBar::chunk {
+                border-radius: 5px;
+                background-color: #8338ec;
+            }
+        """)
+        
+        container_layout.addWidget(title)
+        container_layout.addWidget(version)
+        container_layout.addWidget(self.message)
+        container_layout.addWidget(self.progress)
+        container.setLayout(container_layout)
+        
+        layout.addWidget(container)
+        self.setLayout(layout)
+    
+    def update_progress(self, value, message=""):
+        """Update progress bar and message."""
+        self.progress.setValue(value)
+        if message:
+            self.message.setText(message)
+        QApplication.processEvents()
+
+
+def set_theme(dark_mode=True):
+    """Apply QSS theme to the application."""
+    app = QApplication.instance()
+    if not app:
+        return
+
+    if dark_mode:
+        # Modern Dark Theme QSS - High Contrast
+        qss = """
+        QMainWindow, QDialog, QWidget {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            selection-background-color: #3a86ff;
+            selection-color: #ffffff;
+        }
+        QLabel {
+            color: #eeeeee;
+            background-color: transparent;
+        }
+        QLineEdit, QComboBox, QDateEdit, QSpinBox, QDoubleSpinBox {
+            background-color: #2d2d2d;
+            border: 1px solid #3e3e3e;
+            border-radius: 4px;
+            padding: 4px;
+            color: #ffffff;
+            selection-background-color: #3a86ff;
+        }
+        QLineEdit:read-only {
+            background-color: #252525;
+            color: #aaaaaa;
+        }
+        QComboBox QAbstractItemView {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            selection-background-color: #3a86ff;
+            selection-color: #ffffff;
+            border: 1px solid #3e3e3e;
+        }
+        QComboBox::item:selected {
+            background-color: #3a86ff;
+        }
+        QPushButton {
+            background-color: #3a86ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #2a76ef;
+        }
+        QPushButton:pressed {
+            background-color: #1a66df;
+        }
+        QListWidget, QTableWidget {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            gridline-color: #3e3e3e;
+            border: 1px solid #3e3e3e;
+            border-radius: 4px;
+        }
+        QListWidget::item:selected, QTableWidget::item:selected {
+            background-color: #3a86ff;
+            color: white;
+        }
+        QHeaderView::section {
+            background-color: #1e1e1e;
+            color: #aaaaaa;
+            padding: 5px;
+            border: 1px solid #3e3e3e;
+        }
+        QGroupBox {
+            border: 1px solid #3e3e3e;
+            border-radius: 6px;
+            margin-top: 1.5em;
+            font-weight: bold;
+            background-color: transparent;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left; 
+            padding: 0 5px;
+            color: #3a86ff;
+            background-color: transparent;
+        }
+        QTabWidget::pane {
+            border: 1px solid #3e3e3e;
+            background-color: #1e1e1e;
+        }
+        QTabBar::tab {
+            background-color: #2d2d2d;
+            color: #aaaaaa;
+            padding: 8px 16px;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            margin-right: 2px;
+        }
+        QTabBar::tab:selected {
+            background-color: #3a86ff;
+            color: white;
+        }
+        QMenu {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            border: 1px solid #3e3e3e;
+        }
+        QMenu::item:selected {
+            background-color: #3a86ff;
+            color: #ffffff;
+        }
+        """
+    else:
+        # Light Theme (Clean White & Black) - High Contrast
+        qss = """
+        QMainWindow, QDialog, QWidget {
+            background-color: #ffffff;
+            color: #000000;
+            selection-background-color: #007bff;
+            selection-color: #ffffff;
+        }
+        QLabel {
+            color: #000000;
+            background-color: transparent;
+        }
+        QLineEdit, QComboBox, QDateEdit, QSpinBox, QDoubleSpinBox {
+            background-color: #f8f9fa;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            padding: 4px;
+            color: #000000;
+            selection-background-color: #007bff;
+        }
+        QLineEdit:read-only {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        QComboBox QAbstractItemView {
+            background-color: #ffffff;
+            color: #000000;
+            selection-background-color: #007bff;
+            selection-color: #ffffff;
+            border: 1px solid #cccccc;
+        }
+        QComboBox::item:selected {
+            background-color: #007bff;
+        }
+        QPushButton {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #0069d9;
+        }
+        QPushButton:pressed {
+            background-color: #0062cc;
+        }
+        QListWidget, QTableWidget {
+            background-color: #ffffff;
+            color: #000000;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            gridline-color: #e0e0e0;
+        }
+        QListWidget::item:selected, QTableWidget::item:selected {
+            background-color: #007bff;
+            color: white;
+        }
+        QHeaderView::section {
+            background-color: #f8f9fa;
+            color: #495057;
+            padding: 5px;
+            border: 1px solid #dee2e6;
+        }
+        QGroupBox {
+            border: 1px solid #cccccc;
+            border-radius: 6px;
+            margin-top: 1.5em;
+            font-weight: bold;
+            background-color: transparent;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left; 
+            padding: 0 5px;
+            color: #007bff;
+            background-color: transparent;
+        }
+        QTabWidget::pane {
+            border: 1px solid #cccccc;
+            background-color: #ffffff;
+        }
+        QTabBar::tab {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 8px 16px;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            margin-right: 2px;
+        }
+        QTabBar::tab:selected {
+            background-color: #007bff;
+            color: white;
+        }
+        QMenu {
+            background-color: #ffffff;
+            color: #000000;
+            border: 1px solid #cccccc;
+        }
+        QMenu::item:selected {
+            background-color: #007bff;
+            color: #ffffff;
+        }
+        """
+    app.setStyle("Fusion")
+    app.setStyleSheet(qss)
+
+
+class LanguageSelectionDialog(QDialog):
+    """First-run dialog to select the preferred language."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Language Selection")
+        self.setFixedSize(350, 200)
+        self.selected_language = "English"  # Default
+        
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        
+        title = QLabel("Welcome / მოგესალმებით")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #8338ec;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+        
+        hint = QLabel("Please select your language:\nაირჩიეთ სასურველი ენა:")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(hint)
+        
+        self.lang_combo = QComboBox()
+        self.lang_combo.addItems(["English", "Georgian"])
+        layout.addWidget(self.lang_combo)
+        
+        self.start_btn = QPushButton("Start Application")
+        self.start_btn.clicked.connect(self.on_start)
+        self.start_btn.setStyleSheet("font-weight: bold; padding: 5px;")
+        layout.addWidget(self.start_btn)
+        
+        self.setLayout(layout)
+
+    def on_start(self):
+        self.selected_language = self.lang_combo.currentText()
+        self.accept()
+
+
+class SearchDialog(QDialog):
+    """Global search dialog for finding bills quickly."""
+    def __init__(self, parent, unpaid_bills, paid_bills, currencies):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.unpaid_bills = unpaid_bills
+        self.paid_bills = paid_bills
+        self.currencies = currencies
+        
+        self.setWindowTitle(STRINGS["title_search"])
+        self.setMinimumSize(700, 500)
+        
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        # Search Input
+        search_layout = QHBoxLayout()
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText(STRINGS["label_search_hint"])
+        
+        # Debounce timer to prevent lag during typing
+        self.search_timer = QTimer()
+        self.search_timer.setSingleShot(True)
+        self.search_timer.timeout.connect(lambda: self.perform_search(self.search_input.text()))
+        
+        # Connect to timer instead of direct search
+        self.search_input.textChanged.connect(lambda: self.search_timer.start(300))  # 300ms delay
+        search_layout.addWidget(self.search_input)
+        layout.addLayout(search_layout)
+        
+        # Results Table
+        self.results_table = QTableWidget()
+        self.results_table.setColumnCount(5)
+        self.results_table.setHorizontalHeaderLabels([
+            STRINGS["header_name"],
+            STRINGS["header_amount"],
+            STRINGS["header_category"],
+            STRINGS["header_due_date"],
+            STRINGS["header_status"]
+        ])
+        self.results_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.results_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.results_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.results_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.results_table.customContextMenuRequested.connect(self.show_context_menu)
+        self.results_table.doubleClicked.connect(self.view_bill_details)
+        layout.addWidget(self.results_table)
+        
+        # Initially show all bills
+        self.perform_search("")
+        
+        # Focus on search input
+        self.search_input.setFocus()
+    
+    def perform_search(self, query):
+        """Filter and display bills based on search query."""
+        query = query.lower().strip()
+        
+        # Combine unpaid and paid bills
+        all_bills = []
+        for bill in self.unpaid_bills:
+            all_bills.append((bill, STRINGS["status_unpaid"]))
+        for bill in self.paid_bills:
+            all_bills.append((bill, STRINGS["status_paid"]))
+        
+        # Filter results
+        results = []
+        for bill, status in all_bills:
+            if not query:
+                results.append((bill, status))
+            else:
+                # Search in name, category, amount, date
+                name_match = query in bill.get('name', '').lower()
+                category_match = query in bill.get('category', '').lower()
+                date_match = query in bill.get('due_date', '')
+                amount_match = query in str(bill.get('amount', ''))
+                
+                if name_match or category_match or date_match or amount_match:
+                    results.append((bill, status))
+        
+        # Display results
+        self.results_table.setRowCount(len(results))
+        for i, (bill, status) in enumerate(results):
+            symbol = self.currencies.get(bill['currency'], '$')
+            
+            name_item = QTableWidgetItem(bill['name'])
+            amount_item = QTableWidgetItem(f"{symbol}{bill['amount']:,.2f}")
+            category_item = QTableWidgetItem(bill.get('category', 'Other'))
+            date_item = QTableWidgetItem(bill.get('due_date', STRINGS["no_date_label"]))
+            status_item = QTableWidgetItem(status)
+            
+            # Highlight overdue unpaid bills
+            if status == STRINGS["status_unpaid"]:
+                try:
+                    due_dt = datetime.strptime(bill.get('due_date', ''), '%Y-%m-%d').date()
+                    if due_dt < date.today():
+                        for item in [name_item, amount_item, category_item, date_item, status_item]:
+                            item.setForeground(QColor('#ff4d4d'))
+                except:
+                    pass
+            
+            self.results_table.setItem(i, 0, name_item)
+            self.results_table.setItem(i, 1, amount_item)
+            self.results_table.setItem(i, 2, category_item)
+            self.results_table.setItem(i, 3, date_item)
+            self.results_table.setItem(i, 4, status_item)
+    
+    def show_context_menu(self, position):
+        """Show context menu for selected bill."""
+        row = self.results_table.currentRow()
+        if row < 0:
+            return
+        
+        status = self.results_table.item(row, 4).text()
+        menu = QMenu(self)
+        
+        if status == STRINGS["status_unpaid"]:
+            pay_action = menu.addAction(STRINGS["menu_pay_bill"])
+            pay_action.triggered.connect(lambda: self.pay_selected_bill(row))
+            edit_action = menu.addAction(STRINGS["menu_edit_bill"])
+            edit_action.triggered.connect(lambda: self.edit_selected_bill(row))
+        
+        view_action = menu.addAction(STRINGS["menu_view_details"])
+        view_action.triggered.connect(lambda: self.view_bill_details())
+        
+        menu.exec(self.results_table.viewport().mapToGlobal(position))
+    
+    def get_bill_from_row(self, row):
+        """Get the actual bill object from a table row."""
+        name = self.results_table.item(row, 0).text()
+        status = self.results_table.item(row, 4).text()
+        
+        bills_list = self.unpaid_bills if status == STRINGS["status_unpaid"] else self.paid_bills
+        for bill in bills_list:
+            if bill['name'] == name:
+                return bill, status
+        return None, None
+    
+    def pay_selected_bill(self, row):
+        """Pay the selected bill."""
+        bill, status = self.get_bill_from_row(row)
+        if bill and status == STRINGS["status_unpaid"]:
+            self.parent_window.pay_bill(bill)
+            self.perform_search(self.search_input.text())  # Refresh results
+    
+    def edit_selected_bill(self, row):
+        """Edit the selected bill."""
+        bill, status = self.get_bill_from_row(row)
+        if bill and status == STRINGS["status_unpaid"]:
+            self.parent_window.edit_bill(bill)
+            self.perform_search(self.search_input.text())  # Refresh results
+    
+    def view_bill_details(self):
+        """Show bill details in a message box."""
+        row = self.results_table.currentRow()
+        if row < 0:
+            return
+        
+        bill, status = self.get_bill_from_row(row)
+        if not bill:
+            return
+        
+        symbol = self.currencies.get(bill['currency'], '$')
+        details = f"""
+{STRINGS["header_name"]}: {bill['name']}
+{STRINGS["header_amount"]}: {symbol}{bill['amount']:,.2f}
+{STRINGS["header_category"]}: {bill.get('category', 'Other')}
+{STRINGS["header_due_date"]}: {bill.get('due_date', STRINGS["no_date_label"])}
+{STRINGS["header_frequency"]}: {bill.get('repeat_freq', 'No Repeat')}
+{STRINGS["header_status"]}: {status}
+"""
+        QMessageBox.information(self, STRINGS["menu_view_details"], details.strip())
+
+
+class BillTrackerWindow(QMainWindow):
+    """Main application window."""
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle(f"{STRINGS['app_title']} v{__version__}")
+        self.setWindowIcon(QIcon(get_icon_path()))
+        self.setGeometry(100, 100, 900, 1000)
+        
+        self.real_close = False # For minimize to tray mechanism
+        
+        # Apply 3% transparency
+        self.setWindowOpacity(0.97)  # 3% transparent (97% opaque)
+        
+        # Initialize data
+        config_dir = os.path.join(os.path.expanduser('~'), '.bill_tracker')
+        self.data_manager = DataManager(config_dir)
+        self.currencies = get_currency_list()
+        self.full_currency_list = list(self.currencies.keys())
+        self.unpaid_bills = []
+        self.paid_bills = []
+        self.budget = 0.0
+        self.data_lock = threading.Lock() # Hardened: Protects shared data (rates, budget)
+        self.load_data()
+        
+        # Load theme preference
+        config = self.data_manager.load_config()
+        self.is_dark_mode = config.get('dark_mode', True)
+        
+        # UI Setup
+        # Suppress updates while building the UI to avoid repeated repaints
+        self.setUpdatesEnabled(False)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout()
+        central_widget.setLayout(main_layout)
+        
+        # Apply initial theme
+        set_theme(self.is_dark_mode)
+        
+        # System Tray & Notifications
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon(get_icon_path()))
+        
+        # Tray Menu
+        tray_menu = QMenu()
+        open_action = tray_menu.addAction("Open")
+        open_action.triggered.connect(self.show_window)
+        quit_action = tray_menu.addAction("Quit")
+        quit_action.triggered.connect(self.quit_app)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.on_tray_activated)
+        
+        self.tray_icon.show()
+        
+        # Background Timer for Reminders (Every 4 hours)
+        self.bg_timer = QTimer(self)
+        self.bg_timer.timeout.connect(self.check_due_bills)
+        self.bg_timer.start(14400000) # 4 hours in ms
+        
+        # Check for due bills after a short delay
+        QTimer.singleShot(2000, self.check_due_bills)
+
+        # Tabs
+        self.tabs = QTabWidget()
+        main_layout.addWidget(self.tabs)
+        
+        # Connect tab change for lazy loading
+        self.tabs.currentChanged.connect(self._on_tab_changed)
+        
+        # Chart cache for performance
+        self._chart_cache_hash = None
+        
+        # Tab 1: Dashboard
+        self.dashboard_tab = QWidget()
+        self.setup_dashboard_tab()
+        self.tabs.addTab(self.dashboard_tab, STRINGS["tab_dashboard"])
+        
+        # Tab 2: Unpaid Bills
+        self.unpaid_tab = QWidget()
+        self.setup_unpaid_tab()
+        self.tabs.addTab(self.unpaid_tab, STRINGS["tab_unpaid"])
+        
+        # Tab 3: Paid History
+        self.paid_tab = QWidget()
+        self.setup_paid_tab()
+        self.tabs.addTab(self.paid_tab, STRINGS["tab_paid"])
+        
+
+        
+        # Tab 4: Charts
+        self.chart_tab = QWidget()
+        self.setup_chart_tab()
+        self.tabs.addTab(self.chart_tab, STRINGS["tab_trends"])
+
+        # Tab 5: Calendar
+        self.calendar_tab = QWidget()
+        self.setup_calendar_tab()
+        self.tabs.addTab(self.calendar_tab, STRINGS["tab_calendar"])
+
+        # Tab 6: About
+        self.about_tab = QWidget()
+        self.setup_about_tab()
+        self.tabs.addTab(self.about_tab, STRINGS["tab_about"])
+
+        # Final Initialization
+        # Load cached rates and schedule fetching new ones shortly after startup
+        cached = self.data_manager.load_rates_cache()
+        if cached and isinstance(cached, dict) and 'conversion_rates' in cached:
+            self.handle_api_result({'status': 'success', 'data': cached})
+
+        # Delay the live refresh slightly so the UI becomes responsive first
+        QTimer.singleShot(300, self.refresh_rates)
+        QTimer.singleShot(50, self.update_display)
+        
+        # Timer for periodic rate refresh
+        self.rate_timer = QTimer()
+        self.rate_timer.timeout.connect(self.refresh_rates)
+        
+        # Performance: Debounce timer for filtering
+        self.filter_timer = QTimer()
+        self.filter_timer.setSingleShot(True)
+        self.filter_timer.timeout.connect(self.update_unpaid_table_view)
+        self.rate_timer.start(3600000)  # Every hour
+        
+        # Connect combo boxes
+        self.budget_currency_combo.currentTextChanged.connect(self.update_display)
+        self.summary_currency_combo.currentTextChanged.connect(self.update_display)
+
+        # Restore last used currencies
+        self.restore_currency_preferences()
+
+        # Keyboard Shortcuts
+        search_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        search_shortcut.activated.connect(self.open_search)
+        
+        quick_add_shortcut = QShortcut(QKeySequence("Ctrl+N"), self)
+        quick_add_shortcut.activated.connect(self.quick_add_bill)
+
+        # Re-enable updates after UI construction
+        self.setUpdatesEnabled(True)
+        
+    def setup_dashboard_tab(self):
+        layout = QVBoxLayout()
+        self.dashboard_tab.setLayout(layout)
+        
+        # Scroll area for content
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout()
+        scroll_widget.setLayout(scroll_layout)
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+        
+        # Budget section
+        budget_group = QGroupBox(STRINGS["budget_group_title"])
+        budget_layout = QHBoxLayout()
+        self.budget_input = QLineEdit()
+        budget_layout.addWidget(QLabel(STRINGS["budget_row_title"] + ":"))
+        budget_layout.addWidget(self.budget_input)
+        
+        # Use lazy combo to avoid populating all currencies on startup
+        self.budget_currency_combo = LazyCombo(items_provider=lambda: self.full_currency_list.copy(), pending_text=None)
+        budget_layout.addWidget(self.budget_currency_combo)
+        budget_search_btn = QPushButton("🔍 " + STRINGS["sort_name_button"])
+        budget_search_btn.clicked.connect(lambda: self.open_currency_search(self.budget_currency_combo))
+        budget_layout.addWidget(budget_search_btn)
+        
+        set_budget_btn = QPushButton(STRINGS["set_budget_button"])
+        set_budget_btn.clicked.connect(self.set_budget)
+        budget_layout.addWidget(set_budget_btn)
+        budget_group.setLayout(budget_layout)
+        scroll_layout.addWidget(budget_group)
+        
+        # Add Bill Section
+        add_bill_group = QGroupBox(STRINGS["add_bill_group_title"])
+        add_bill_layout = QGridLayout()
+        
+        self.bill_name_input = QLineEdit()
+        add_bill_layout.addWidget(QLabel(STRINGS["bill_name_row"] + ":"), 0, 0)
+        add_bill_layout.addWidget(self.bill_name_input, 0, 1)
+        
+        self.bill_amount_input = QLineEdit()
+        add_bill_layout.addWidget(QLabel(STRINGS["amount_row"] + ":"), 1, 0)
+        add_bill_layout.addWidget(self.bill_amount_input, 1, 1)
+        
+        # Currency Row with Search
+        add_bill_layout.addWidget(QLabel(STRINGS["currency_label"] + ":"), 2, 0)
+        curr_layout = QHBoxLayout()
+        self.bill_currency_combo = LazyCombo(items_provider=lambda: self.full_currency_list.copy(), pending_text=None)
+        curr_layout.addWidget(self.bill_currency_combo)
+        curr_search_btn = QPushButton("🔍")
+        curr_search_btn.setFixedWidth(40)
+        curr_search_btn.clicked.connect(lambda: self.open_currency_search(self.bill_currency_combo))
+        curr_layout.addWidget(curr_search_btn)
+        add_bill_layout.addLayout(curr_layout, 2, 1)
+        
+        # Category
+        self.bill_category_combo = QComboBox()
+        self.bill_category_combo.addItems(CATEGORIES)
+        add_bill_layout.addWidget(QLabel(STRINGS["category_label"] + ":"), 3, 0)
+        add_bill_layout.addWidget(self.bill_category_combo, 3, 1)
+        
+        # Repeat
+        self.bill_repeat_combo = QComboBox()
+        self.bill_repeat_combo.addItems(FREQUENCIES)
+        add_bill_layout.addWidget(QLabel(STRINGS["repeat_label"] + ":"), 4, 0)
+        add_bill_layout.addWidget(self.bill_repeat_combo, 4, 1)
+        
+        # Date
+        self.bill_date_input = QDateEdit()
+        self.bill_date_input.setCalendarPopup(True)
+        self.bill_date_input.setDate(QDate.currentDate())
+        add_bill_layout.addWidget(QLabel(STRINGS["due_date_row"] + ":"), 5, 0)
+        add_bill_layout.addWidget(self.bill_date_input, 5, 1)
+        
+        add_bill_btn = QPushButton(STRINGS["add_bill_button"])
+        add_bill_btn.clicked.connect(self.add_bill)
+        add_bill_layout.addWidget(add_bill_btn, 6, 0, 1, 2)
+        
+        add_bill_group.setLayout(add_bill_layout)
+        scroll_layout.addWidget(add_bill_group)
+        
+        # Summary Area (Quick View)
+        summary_group = QGroupBox(STRINGS["group_quick_status"])
+        summary_layout = QVBoxLayout()
+        
+        self.total_unpaid_label = QLabel(STRINGS["total_unpaid_label"] + " $0.00")
+        self.total_unpaid_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_font = QFont()
+        title_font.setPointSize(12)
+        title_font.setBold(True)
+        self.total_unpaid_label.setFont(title_font)
+        summary_layout.addWidget(self.total_unpaid_label)
+        
+        self.remaining_budget_label = QLabel(STRINGS["budget_after_paying_label"] + " $0.00")
+        self.remaining_budget_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        summary_layout.addWidget(self.remaining_budget_label)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setTextVisible(True)
+        summary_layout.addWidget(self.progress_bar)
+        
+        self.rates_status_label = QLabel()
+        self.rates_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        summary_layout.addWidget(self.rates_status_label)
+
+        # Summarize In Currency
+        currency_layout = QHBoxLayout()
+        currency_layout.addWidget(QLabel(STRINGS["summarize_in_label"]))
+        self.summary_currency_combo = LazyCombo(items_provider=lambda: self.full_currency_list.copy(), pending_text=None)
+        currency_layout.addWidget(self.summary_currency_combo)
+        summary_search_btn = QPushButton("🔍 " + STRINGS["sort_name_button"])
+        summary_search_btn.clicked.connect(lambda: self.open_currency_search(self.summary_currency_combo))
+        currency_layout.addWidget(summary_search_btn)
+        summary_layout.addLayout(currency_layout)
+        
+        summary_group.setLayout(summary_layout)
+        scroll_layout.addWidget(summary_group)
+        
+        # Support & Data (v5.0)
+        about_group = QGroupBox(STRINGS["group_support_data"])
+        about_layout = QVBoxLayout()
+        
+        # Created By
+        credits = QLabel(f'<a href="https://guns.lol/grouvya" style="color: #8338ec; font-weight: bold; text-decoration: none;">{STRINGS["credits_link"]}</a>')
+        credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        credits.setOpenExternalLinks(True)
+        font = QFont()
+        font.setPointSize(11)
+        credits.setFont(font)
+        about_layout.addWidget(credits)
+        
+        about_group.setLayout(about_layout)
+        scroll_layout.addWidget(about_group)
+        
+        # Buttons Row
+        btn_layout = QHBoxLayout()
+        
+        export_btn = QPushButton(STRINGS["btn_export_csv"])
+        export_btn.clicked.connect(self.export_csv)
+        btn_layout.addWidget(export_btn)
+        
+        pdf_btn = QPushButton(STRINGS["btn_export_pdf"])
+        pdf_btn.clicked.connect(self.export_pdf)
+        btn_layout.addWidget(pdf_btn)
+        
+        about_layout.addLayout(btn_layout)
+        about_group.setLayout(about_layout)
+        scroll_layout.addWidget(about_group)
+        
+        # Other Actions
+        actions_group = QGroupBox(STRINGS["actions_group_title"])
+        actions_layout = QHBoxLayout()
+        
+        search_btn = QPushButton(STRINGS["btn_search"])
+        search_btn.clicked.connect(self.open_search)
+        actions_layout.addWidget(search_btn)
+        
+        converter_btn = QPushButton(STRINGS["converter_button"])
+        converter_btn.clicked.connect(self.open_converter)
+        actions_layout.addWidget(converter_btn)
+        
+        settings_btn = QPushButton(STRINGS["settings_button"])
+        settings_btn.clicked.connect(self.open_settings)
+        actions_layout.addWidget(settings_btn)
+        
+        tray_btn = QPushButton(STRINGS["btn_minimize_tray"])
+        tray_btn.clicked.connect(self.hide_to_tray)
+        actions_layout.addWidget(tray_btn)
+        
+        refresh_btn = QPushButton(STRINGS["refresh_rates_button"])
+        refresh_btn.clicked.connect(self.refresh_rates)
+        actions_layout.addWidget(refresh_btn)
+        
+        actions_group.setLayout(actions_layout)
+        scroll_layout.addWidget(actions_group)
+        
+        # Spacer
+        scroll_layout.addStretch()
+
+    def setup_unpaid_tab(self):
+        layout = QVBoxLayout()
+        self.unpaid_tab.setLayout(layout)
+        
+        # Summary Header
+        self.unpaid_summary_label = QLabel(STRINGS["total_unpaid_label"] + " $0.00")
+        self.unpaid_summary_label.setObjectName("summaryLabel")
+        font = QFont()
+        font.setPointSize(14)
+        font.setBold(True)
+        self.unpaid_summary_label.setFont(font)
+        self.unpaid_summary_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.unpaid_summary_label)
+
+        # Filter Bar
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(QLabel(STRINGS["label_filter_category"]))
+        self.category_filter_combo = QComboBox()
+        self.category_filter_combo.addItem(STRINGS["item_all_categories"])
+        self.category_filter_combo.addItems(CATEGORIES)
+        # Optimized: Debounce filter to prevent UI lag
+        self.category_filter_combo.currentTextChanged.connect(lambda: self.filter_timer.start(300))
+        filter_layout.addWidget(self.category_filter_combo)
+        filter_layout.addStretch()
+        layout.addLayout(filter_layout)
+        
+        # Table
+        self.unpaid_table = QTableWidget()
+        self.unpaid_table.setColumnCount(5)
+        self.unpaid_table.setHorizontalHeaderLabels([
+            STRINGS["header_name"], 
+            STRINGS["header_amount"], 
+            STRINGS["header_category"], 
+            STRINGS["header_due_date"], 
+            STRINGS["header_frequency"]
+        ])
+        self.unpaid_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.unpaid_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.unpaid_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.unpaid_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.unpaid_table.customContextMenuRequested.connect(self.show_unpaid_context_menu)
+        self.unpaid_table.itemClicked.connect(lambda item: self.show_bill_details(item, is_paid=False))
+        layout.addWidget(self.unpaid_table)
+
+    def setup_paid_tab(self):
+        layout = QVBoxLayout()
+        self.paid_tab.setLayout(layout)
+        
+        # Summary Header
+        self.paid_summary_label = QLabel(STRINGS["label_total_paid"] + ": $0.00")
+        self.paid_summary_label.setObjectName("summaryLabel")
+        font = QFont()
+        font.setPointSize(14)
+        font.setBold(True)
+        self.paid_summary_label.setFont(font)
+        self.paid_summary_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.paid_summary_label)
+        
+        # Table
+        self.paid_table = QTableWidget()
+        self.paid_table.setColumnCount(5)
+        self.paid_table.setHorizontalHeaderLabels([
+            STRINGS["header_name"], 
+            STRINGS["header_amount"], 
+            STRINGS["header_category"], 
+            STRINGS["header_paid_date"], 
+            STRINGS["header_frequency"]
+        ])
+        self.paid_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.paid_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.paid_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.paid_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.paid_table.customContextMenuRequested.connect(self.show_paid_context_menu)
+        self.paid_table.itemClicked.connect(lambda item: self.show_bill_details(item, is_paid=True))
+        layout.addWidget(self.paid_table)
+    
+    def restore_currency_preferences(self):
+        """Restore last used currency selections from saved data."""
+        try:
+            data = self.data_manager.load_data()
+            budget_curr = data.get('budget_currency', '$ (USD)')
+            bill_curr = data.get('bill_currency', '$ (USD)')
+            summary_curr = data.get('summary_currency', '$ (USD)')
+            
+            if budget_curr in self.full_currency_list:
+                self.budget_currency_combo.setCurrentText(budget_curr)
+            if bill_curr in self.full_currency_list:
+                self.bill_currency_combo.setCurrentText(bill_curr)
+            if summary_curr in self.full_currency_list:
+                self.summary_currency_combo.setCurrentText(summary_curr)
+        except:
+            pass
+    
+    def open_currency_search(self, combo_box):
+        """Open searchable currency selector for a combo box."""
+        dialog = CurrencySelectorDialog(self, self.currencies, combo_box.currentText())
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected = dialog.get_selected_currency()
+            if selected:
+                combo_box.setCurrentText(selected)
+    
+    def load_data(self):
+        data = self.data_manager.load_data()
+        
+        if data.get('__tampered__'):
+            reply = QMessageBox.critical(self, "Security Alert", 
+                                       "Data Integrity Violation!\n\nThe data file has been modified externally.\nThis could be due to tampering or corruption.\n\nDo you want to restore from the last automatic backup?",
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                self.restore_backup()
+                return
+        
+        self.unpaid_bills = data.get('unpaid_bills', [])
+        self.paid_bills = data.get('paid_bills', [])
+        self.budget = float(data.get('budget', 0.0))
+    
+    def restore_backup(self):
+        """Attempt to restore from backup folder."""
+        backup_dir = os.path.join(self.data_manager.config_dir, 'backups')
+        if not os.path.exists(backup_dir):
+            QMessageBox.warning(self, STRINGS["title_restore_failed"], STRINGS["msg_no_backups"])
+            return
+
+        backups = sorted([f for f in os.listdir(backup_dir) if f.startswith('bill_data_')], reverse=True)
+        if not backups:
+            QMessageBox.warning(self, STRINGS["title_restore_failed"], STRINGS["msg_no_backups"])
+            return
+            
+        latest = os.path.join(backup_dir, backups[0])
+        try:
+            # Hardened: Verify integrity BEFORE restoring 🛡️
+            with open(latest, 'r', encoding='utf-8') as f:
+                test_load = json.load(f)
+            if not isinstance(test_load, dict) or 'unpaid_bills' not in test_load:
+                raise ValueError("Backup file is corrupt or invalid format")
+
+            # Copy backup to main data file
+            import shutil
+            shutil.copy2(latest, self.data_manager.data_file)
+            QMessageBox.information(self, STRINGS["title_restored"], STRINGS["msg_restored"])
+            self.load_data()
+            self.update_display()
+        except Exception as e:
+            logging.exception("Backup restore failed")
+            QMessageBox.critical(self, STRINGS["title_error"], f"{STRINGS['msg_restore_error'].format(e)}")
+    
+    def save_data(self):
+        data = {
+            'budget': self.budget,
+            'unpaid_bills': self.unpaid_bills,
+            'paid_bills': self.paid_bills,
+            'budget_currency': self.budget_currency_combo.currentText(),
+            'bill_currency': self.bill_currency_combo.currentText(),
+            'summary_currency': self.summary_currency_combo.currentText()
+        }
+        self.data_manager.save_data(data)
+    
+    def set_budget(self):
+        try:
+            raw_val = self.budget_input.text()
+            amount = strict_float(raw_val) # Hardened parsing
+            curr = self.budget_currency_combo.currentText()
+            
+            with self.data_lock:
+                rate = self.exchange_rates.get(curr, 1)
+                if rate <= 0:
+                    raise ValueError
+                self.budget = amount / rate
+            
+            self.save_data()
+            QMessageBox.information(self, STRINGS["info_budget_set"], 
+                                  STRINGS["info_budget_set_to"].format(f"{self.currencies.get(curr, '')}{amount:,.2f}"))
+            self.update_display()
+        except ValueError:
+            QMessageBox.warning(self, STRINGS["dialog_input_error"], STRINGS["error_valid_number"])
+        except Exception as e:
+            logging.exception("Failed to set budget")
+            QMessageBox.critical(self, "Error", f"Failed to set budget: {e}")
+    
+    def add_bill(self):
+        name = sanitize_input(self.bill_name_input.text()) # Hardened: Strip hidden chars
+        amount_text = self.bill_amount_input.text()
+        currency = self.bill_currency_combo.currentText()
+        category = self.bill_category_combo.currentText()
+        repeat = self.bill_repeat_combo.currentText()
+        due_date = self.bill_date_input.date().toString('yyyy-MM-dd')
+        
+        if not name or not amount_text:
+            QMessageBox.warning(self, STRINGS["dialog_input_error"], STRINGS["error_enter_name_amount"])
+            return
+            
+        try:
+            amount = strict_float(amount_text) # Hardened: Locale-aware parsing
+            if amount <= 0:
+                raise ValueError
+            if amount > 1000000000:
+                QMessageBox.warning(self, STRINGS["dialog_input_error"], STRINGS["msg_amount_large"])
+                return
+        except ValueError:
+            QMessageBox.warning(self, STRINGS["dialog_input_error"], STRINGS["error_positive_amount"])
+            return
+        except Exception as e:
+            logging.warning(f"Invalid bill amount format: {e}")
+            QMessageBox.warning(self, STRINGS["dialog_input_error"], STRINGS["msg_invalid_format"])
+            return
+        
+        bill = {
+            'name': name, 
+            'amount': amount, 
+            'currency': currency, 
+            'category': get_canonical_category(category),
+            'repeat_freq': get_canonical_frequency(repeat),
+            'due_date': due_date,
+            'created_at': datetime.now().isoformat()
+        }
+        self.unpaid_bills.append(bill)
+        
+        # Reset inputs
+        self.bill_name_input.clear()
+        self.bill_amount_input.clear()
+        
+        self.save_data()
+        self.update_display()
+        
+        QMessageBox.information(self, STRINGS["title_success"], STRINGS["msg_bill_added"].format(name))
+
+    def pay_bill(self, bill):
+        """Pay a bill and move to paid list. Handle recurrence."""
+        reply = QMessageBox.question(self, STRINGS["dialog_confirm_payment"],
+                                   STRINGS["confirm_payment_msg"].format(bill['name']),
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            rate = self.exchange_rates.get(bill['currency'], 1)
+            # Find closest rate or default
+            
+            # Handle Recurrence
+            # Use canonical frequency for logic (always English)
+            freq = get_canonical_frequency(bill.get('repeat_freq', 'No Repeat'))
+            
+            if freq != 'No Repeat':
+                try:
+                    # Use QDate for robust date math
+                    qd = QDate.fromString(bill['due_date'], 'yyyy-MM-dd')
+                    if not qd.isValid():
+                        qd = QDate.currentDate()
+                    
+                    if freq == 'Weekly': qd = qd.addDays(7)
+                    elif freq == 'Monthly': qd = qd.addMonths(1)
+                    elif freq == 'Yearly': qd = qd.addYears(1)
+                    
+                    new_bill = bill.copy()  # Use copy to create new recurring bill
+                    new_bill['due_date'] = qd.toString('yyyy-MM-dd')
+                    new_bill['created_at'] = datetime.now().isoformat()
+                    
+                    # Auto-create next bill
+                    self.unpaid_bills.append(new_bill)
+                    
+                    # Notify user
+                    self.tray_icon.showMessage(STRINGS["title_recurring_created"], 
+                                             STRINGS["msg_recurring_created"].format(bill['name'], new_bill['due_date']),
+                                             QSystemTrayIcon.MessageIcon.Information, 3000)
+                except Exception as e:
+                    logging.error(f"Recurrence error: {e}")
+
+            if bill in self.unpaid_bills:
+                self.unpaid_bills.remove(bill)
+            self.paid_bills.insert(0, bill) # Add to top
+            self.save_data()
+            self.update_display()
+
+    def open_contact(self):
+        webbrowser.open("https://guns.lol/grouvya")
+
+    def export_csv(self):
+        """Export data to CSV."""
+        file_path, _ = QFileDialog.getSaveFileName(self, STRINGS["title_export_data"], "bill_history.csv", STRINGS["filter_csv"])
+        if not file_path:
+            return
+            
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Name", "Amount", "Currency", "Category", "Due Date", "Frequency", "Status"])
+                
+                for b in self.unpaid_bills:
+                    writer.writerow([b['name'], b['amount'], b['currency'], b.get('category',''), b['due_date'], b.get('repeat_freq',''), "Unpaid"])
+                    
+                for b in self.paid_bills:
+                    writer.writerow([b['name'], b['amount'], b['currency'], b.get('category',''), b['due_date'], b.get('repeat_freq',''), "Paid"])
+            
+            QMessageBox.information(self, STRINGS["title_export_success"], STRINGS["msg_export_success"].format(file_path))
+        except Exception as e:
+            QMessageBox.critical(self, STRINGS["title_export_failed"], str(e))
+
+    def check_due_bills(self):
+        """Check for bills due today or tomorrow."""
+        today = date.today()
+        count = 0
+        for bill in self.unpaid_bills:
+            try:
+                due = datetime.strptime(bill['due_date'], '%Y-%m-%d').date()
+                delta = (due - today).days
+                
+                # Load preference
+                config = self.data_manager.load_config()
+                days_advance = config.get('reminder_days', 1)
+                
+                if delta <= days_advance:
+                    count += 1
+            except: pass
+            
+        if count > 0:
+            self.tray_icon.showMessage(
+                STRINGS["notification_title"],
+                STRINGS["notification_msg"].format(count),
+                QSystemTrayIcon.MessageIcon.Information,
+                5000
+            )
+    
+    def refresh_rates(self):
+        self.api_thread = APIThread()
+        self.api_thread.finished.connect(self.handle_api_result)
+        self.api_thread.start()
+    
+    def handle_api_result(self, result):
+        if result['status'] == 'success':
+            data = result['data']
+            api_rates = data.get('conversion_rates', {})
+            updated_rates = {}
+            for curr_str in self.currencies:
+                code = curr_str.split('(')[-1].replace(')', '').strip()
+                if code in api_rates:
+                    updated_rates[curr_str] = api_rates[code]
+            updated_rates['$ (USD)'] = 1.0
+            
+            with self.data_lock: # Thread Safety: Update shared state
+                self.exchange_rates = updated_rates
+                
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.rates_status_label.setText(STRINGS["rates_updated_at"].format(now))
+            self.data_manager.save_rates_cache(data)
+        else:
+            self.rates_status_label.setText(result.get('message', STRINGS["api_error"]))
+        self.update_display()
+    
+    def setup_chart_tab(self):
+        layout = QVBoxLayout()
+        self.chart_tab.setLayout(layout)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        widget = QWidget()
+        layout.addWidget(scroll)
+        scroll.setWidget(widget)
+        
+        vbox = QVBoxLayout()
+        widget.setLayout(vbox)
+        
+        # Budget Chart
+        vbox.addWidget(QLabel(STRINGS["chart_budget_title"]))
+        self.budget_chart = ChartWidget()
+        vbox.addWidget(self.budget_chart)
+        
+        # Category Chart
+        vbox.addWidget(QLabel(STRINGS["chart_category_title"]))
+        self.category_chart = ChartWidget()
+        vbox.addWidget(self.category_chart)
+        
+        # Trends Chart
+        vbox.addWidget(QLabel(STRINGS["label_monthly_history"]))
+        self.trends_chart = TrendsWidget()
+        vbox.addWidget(self.trends_chart)
+
+    def setup_calendar_tab(self):
+        layout = QVBoxLayout()
+        self.calendar_tab.setLayout(layout)
+        
+        self.calendar = BillCalendar()
+        self.calendar.clicked.connect(self.handle_calendar_click)
+        layout.addWidget(self.calendar)
+        
+        self.calendar_label = QLabel(STRINGS["label_calendar_hint"])
+        self.calendar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.calendar_label)
+
+    def setup_about_tab(self):
+        """Setup About tab with lazy-loaded README content."""
+        layout = QVBoxLayout()
+        self.about_tab.setLayout(layout)
+        
+        # Create scrollable text area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        
+        # Text widget for README
+        self.about_text_widget = QLabel()
+        self.about_text_widget.setWordWrap(True)
+        self.about_text_widget.setTextFormat(Qt.TextFormat.MarkdownText)
+        self.about_text_widget.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.about_text_widget.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.about_text_widget.setStyleSheet("padding: 20px; font-size: 11pt;")
+        self.about_text_widget.setText("Loading...")
+        
+        scroll.setWidget(self.about_text_widget)
+        layout.addWidget(scroll)
+        
+        # Contact Button at the bottom
+        self.contact_btn = QPushButton(STRINGS["btn_contact"])
+        self.contact_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.contact_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #8338ec; 
+                color: white; 
+                font-weight: bold;
+                padding: 10px;
+                font-size: 11pt;
+            }
+            QPushButton:hover { background-color: #9b5de5; }
+        """)
+        self.contact_btn.clicked.connect(self.open_contact)
+        layout.addWidget(self.contact_btn)
+        
+        # Mark as not loaded yet (lazy loading)
+        self.about_loaded = False
+
+    def _load_readme(self):
+        """Lazy load README content when About tab is opened (supports English and Georgian)."""
+        if self.about_loaded:
+            return
+            
+        # Select README based on language
+        # We check if the app title in the current STRINGS matches the Georgian one
+        is_georgian = STRINGS.get("app_title") == TRANSLATIONS["Georgian"].get("app_title")
+        readme_filename = 'README_GE.md' if is_georgian else 'README.md'
+            
+        readme_path = resource_path(readme_filename)
+        try:
+            if os.path.exists(readme_path):
+                with open(readme_path, 'r', encoding='utf-8') as f:
+                    readme_content = f.read()
+            else:
+                # Fallback to English if Georgian file is missing
+                readme_path = resource_path('README.md')
+                with open(readme_path, 'r', encoding='utf-8') as f:
+                    readme_content = f.read()
+                    
+            self.about_text_widget.setText(readme_content)
+        except Exception as e:
+            self.about_text_widget.setText(f"# Error loading documentation\n\n{str(e)}")
+            logging.error(f"Failed to load README ({readme_filename}): {e}")
+        
+        self.about_loaded = True
+
+
+    def handle_calendar_click(self, date):
+        dt = date.toString("yyyy-MM-dd")
+        bills = [b['name'] for b in self.unpaid_bills if b.get('due_date') == dt]
+        if bills:
+            self.calendar_label.setText(STRINGS["label_due_on"].format(dt, ', '.join(bills)))
+        else:
+            self.calendar_label.setText(STRINGS["label_no_bills_due"].format(dt))
+        
+    def update_charts(self):
+        if not hasattr(self, 'budget_chart'):
+            return
+            
+        with self.data_lock: # Hardened: Read state snapshot for consistent chart rendering
+            rates = self.exchange_rates.copy()
+            current_budget = self.budget
+            
+        # 1. Budget vs Expenses
+        total_unpaid = 0.0
+        budget_curr = self.budget_currency_combo.currentText()
+        target_rate = rates.get(budget_curr, 1) or 1
+        
+        for bill in self.unpaid_bills:
+            b_rate = rates.get(bill['currency'], 1) or 1
+            if b_rate > 0:
+                total_unpaid += (bill['amount'] / b_rate) * target_rate
+            
+        self.budget_chart.set_data({STRINGS["label_remaining"]: max(0, current_budget), STRINGS["label_unpaid_bills_chart"]: total_unpaid})
+        
+        # 2. Expenses by Category (Unpaid)
+        cat_data = {}
+        for bill in self.unpaid_bills:
+            cat_canonical = bill.get('category', 'Other')
+            cat_display = get_display_category(cat_canonical)
+            b_rate = rates.get(bill['currency'], 1) or 1
+            if b_rate > 0:
+                amt = (bill['amount'] / b_rate) * target_rate
+                cat_data[cat_display] = cat_data.get(cat_display, 0) + amt
+            
+        self.category_chart.set_data(cat_data)
+        
+        # 3. Trends (Paid History by Month)
+        trends_data = {}
+        for bill in self.paid_bills:
+            d = bill.get('due_date', '')
+            if len(d) >= 7:
+                key = d[:7] # YYYY-MM
+                b_rate = rates.get(bill['currency'], 1) or 1
+                if b_rate > 0:
+                    amt = (bill['amount'] / b_rate) * target_rate
+                    trends_data[key] = trends_data.get(key, 0) + amt
+        
+        if hasattr(self, 'trends_chart'):
+            self.trends_chart.set_data(trends_data)
+        
+        # Update Calendar
+        if hasattr(self, 'calendar'):
+            self.calendar.set_bills(self.unpaid_bills)
+
+    def _on_tab_changed(self, index):
+        """Handle tab changes for lazy loading."""
+        # About tab is index 5 (0-indexed: Dashboard, Unpaid, Paid, Charts, Calendar, About)
+        if index == 5:
+            self._load_readme()
+
+
+    def update_display(self):
+        self.update_charts()
+        
+        with self.data_lock: # Hardened: Consistent data read
+            rates = self.exchange_rates.copy()
+            current_budget = self.budget
+            
+        # Update budget display
+        curr = self.budget_currency_combo.currentText()
+        rate = rates.get(curr, 1)
+        if rate > 0:
+            self.budget_input.setText(f"{current_budget * rate:,.2f}")
+        
+        # Update summary
+        summary_curr = self.summary_currency_combo.currentText()
+        summary_symbol = self.currencies.get(summary_curr, '$')
+        summary_rate = rates.get(summary_curr, 1)
+        
+        if summary_rate > 0:
+            total_unpaid_usd = sum(b['amount'] / rates.get(b['currency'], 1) 
+                          for b in self.unpaid_bills if rates.get(b['currency']))
+            remaining_usd = current_budget - total_unpaid_usd
+            
+            self.total_unpaid_label.setText(f"{STRINGS['total_unpaid_label']} {summary_symbol}{total_unpaid_usd * summary_rate:,.2f}")
+            self.remaining_budget_label.setText(f"{STRINGS['budget_after_paying_label']} {summary_symbol}{remaining_usd * summary_rate:,.2f}")
+            
+            if current_budget > 0:
+                percentage = remaining_usd / current_budget
+                self.progress_bar.setValue(max(0, int(percentage * 100)))
+                if percentage < 0.25:
+                    self.progress_bar.setStyleSheet("background-color: #f08080;")
+                elif percentage < 0.50:
+                    self.progress_bar.setStyleSheet("background-color: #ffa500;")
+                else:
+                    self.progress_bar.setStyleSheet("background-color: #90ee90;")
+        
+        
+        # Calculate and Update Unpaid Bills Summary
+        total_unpaid_usd = sum(b['amount'] / rates.get(b['currency'], 1) 
+                              for b in self.unpaid_bills if rates.get(b['currency']))
+        self.unpaid_summary_label.setText(f"{STRINGS['total_unpaid_label']}: {summary_symbol}{total_unpaid_usd * summary_rate:,.2f}")
+        
+        # Calculate Total Paid
+        total_paid_usd = sum(b['amount'] / rates.get(b['currency'], 1) 
+                            for b in self.paid_bills if rates.get(b['currency']))
+        self.paid_summary_label.setText(f"{STRINGS['label_total_paid']}: {summary_symbol}{total_paid_usd * summary_rate:,.2f}")
+        
+        # Update Tables
+        self.update_unpaid_table_view()
+        self.update_paid_table_view()
+
+    def update_unpaid_table_view(self):
+        """Update only the unpaid bills table (optimized)."""
+        self.unpaid_table.setRowCount(0)
+        
+        # Filter Logic
+        filter_cat = getattr(self, 'category_filter_combo', None)
+        target_cat = filter_cat.currentText() if filter_cat else STRINGS["item_all_categories"]
+        target_canonical = get_canonical_category(target_cat)
+        
+        filtered_bills = []
+        for bill in self.unpaid_bills:
+            if target_cat == STRINGS["item_all_categories"] or bill.get('category') == target_canonical:
+                filtered_bills.append(bill)
+        
+        self.unpaid_table.setRowCount(len(filtered_bills))
+        
+        for i, bill in enumerate(filtered_bills):
+            symbol = self.currencies.get(bill['currency'], '$')
+            
+            # Name
+            name_item = QTableWidgetItem(bill['name'])
+            name_item.setData(Qt.ItemDataRole.UserRole, bill)
+            # Amount
+            amount_item = QTableWidgetItem(f"{symbol}{bill['amount']:,.2f}")
+            # Category
+            cat_display = get_display_category(bill.get('category', 'Other'))
+            cat_item = QTableWidgetItem(cat_display)
+            # Due Date
+            due_date = bill.get('due_date', STRINGS["no_date_label"])
+            date_item = QTableWidgetItem(due_date)
+            # Frequency
+            freq_display = get_display_frequency(bill.get('repeat_freq', 'No Repeat'))
+            freq_item = QTableWidgetItem(freq_display)
+            
+            # Check overdue
+            try:
+                due_raw = bill.get('due_date', '')
+                if safe_parse_date(due_raw, None):
+                    due_dt = datetime.strptime(due_raw, '%Y-%m-%d').date()
+                    if due_dt < date.today():
+                        for item in [name_item, amount_item, cat_item, date_item, freq_item]:
+                            item.setForeground(QColor('#ff4d4d')) # Red text
+            except Exception as e:
+                logging.error(f"Error checking overdue status for {bill.get('name')}: {e}")
+                
+            self.unpaid_table.setItem(i, 0, name_item)
+            self.unpaid_table.setItem(i, 1, amount_item)
+            self.unpaid_table.setItem(i, 2, cat_item)
+            self.unpaid_table.setItem(i, 3, date_item)
+            self.unpaid_table.setItem(i, 4, freq_item)
+
+    def update_paid_table_view(self):
+        """Update the paid bills history table."""
+        self.paid_table.setRowCount(0)
+        self.paid_table.setRowCount(len(self.paid_bills))
+        
+        for i, bill in enumerate(self.paid_bills):
+            symbol = self.currencies.get(bill['currency'], '$')
+            
+            name_item = QTableWidgetItem(bill['name'])
+            name_item.setData(Qt.ItemDataRole.UserRole, bill)
+            self.paid_table.setItem(i, 0, name_item)
+            self.paid_table.setItem(i, 1, QTableWidgetItem(f"{symbol}{bill['amount']:,.2f}"))
+            self.paid_table.setItem(i, 2, QTableWidgetItem(bill.get('category', 'Other')))
+            self.paid_table.setItem(i, 3, QTableWidgetItem(bill.get('due_date', '-')))
+            self.paid_table.setItem(i, 4, QTableWidgetItem(bill.get('repeat_freq', '-')))
+            rates = self.exchange_rates.copy()
+            current_budget = self.budget
+            
+        # Update budget display
+        curr = self.budget_currency_combo.currentText()
+        rate = rates.get(curr, 1)
+        if rate > 0:
+            self.budget_input.setText(f"{current_budget * rate:,.2f}")
+        
+        # Update summary
+        summary_curr = self.summary_currency_combo.currentText()
+        summary_symbol = self.currencies.get(summary_curr, '$')
+        summary_rate = rates.get(summary_curr, 1)
+        
+        if summary_rate > 0:
+            total_usd = sum(b['amount'] / rates.get(b['currency'], 1) 
+                          for b in self.unpaid_bills if rates.get(b['currency']))
+            remaining_usd = current_budget - total_usd
+            
+            self.total_unpaid_label.setText(f"{STRINGS['total_unpaid_label']} {summary_symbol}{total_usd * summary_rate:,.2f}")
+            self.remaining_budget_label.setText(f"{STRINGS['budget_after_paying_label']} {summary_symbol}{remaining_usd * summary_rate:,.2f}")
+            
+            if current_budget > 0:
+                percentage = remaining_usd / current_budget
+                self.progress_bar.setValue(max(0, int(percentage * 100)))
+                if percentage < 0.25:
+                    self.progress_bar.setStyleSheet("background-color: #f08080;")
+                elif percentage < 0.50:
+                    self.progress_bar.setStyleSheet("background-color: #ffa500;")
+                else:
+                    self.progress_bar.setStyleSheet("background-color: #90ee90;")
+        
+        
+        # Calculate and Update Unpaid Bills Summary
+        total_unpaid_usd = sum(b['amount'] / rates.get(b['currency'], 1) 
+                              for b in self.unpaid_bills if rates.get(b['currency']))
+        self.unpaid_summary_label.setText(f"{STRINGS['total_unpaid_label']}: {summary_symbol}{total_unpaid_usd * summary_rate:,.2f}")
+        
+        # Calculate Total Paid
+        total_paid_usd = sum(b['amount'] / rates.get(b['currency'], 1) 
+                            for b in self.paid_bills if rates.get(b['currency']))
+        self.paid_summary_label.setText(f"{STRINGS['label_total_paid']}: {summary_symbol}{total_paid_usd * summary_rate:,.2f}")
+        
+        # Update Unpaid Table
+        self.unpaid_table.setRowCount(0)
+        
+        # Filter Logic
+        filter_cat = getattr(self, 'category_filter_combo', None)
+        target_cat = filter_cat.currentText() if filter_cat else STRINGS["item_all_categories"]
+        target_canonical = get_canonical_category(target_cat)
+        
+        filtered_bills = []
+        for bill in self.unpaid_bills:
+            if target_cat == STRINGS["item_all_categories"] or bill.get('category') == target_canonical:
+                filtered_bills.append(bill)
+        
+        self.unpaid_table.setRowCount(len(filtered_bills))
+        
+        for i, bill in enumerate(filtered_bills):
+            symbol = self.currencies.get(bill['currency'], '$')
+            
+            # Name
+            name_item = QTableWidgetItem(bill['name'])
+            name_item.setData(Qt.ItemDataRole.UserRole, bill)
+            # Amount
+            amount_item = QTableWidgetItem(f"{symbol}{bill['amount']:,.2f}")
+            # Category
+            cat_display = get_display_category(bill.get('category', 'Other'))
+            cat_item = QTableWidgetItem(cat_display)
+            # Due Date
+            due_date = bill.get('due_date', STRINGS["no_date_label"])
+            date_item = QTableWidgetItem(due_date)
+            # Frequency
+            freq_display = get_display_frequency(bill.get('repeat_freq', 'No Repeat'))
+            freq_item = QTableWidgetItem(freq_display)
+            
+            # Check overdue
+            try:
+                due_raw = bill.get('due_date', '')
+                if safe_parse_date(due_raw, None):
+                    due_dt = datetime.strptime(due_raw, '%Y-%m-%d').date()
+                    if due_dt < date.today():
+                        for item in [name_item, amount_item, cat_item, date_item, freq_item]:
+                            item.setForeground(QColor('#ff4d4d')) # Red text
+            except Exception as e:
+                logging.error(f"Error checking overdue status for {bill.get('name')}: {e}")
+
+                
+            self.unpaid_table.setItem(i, 0, name_item)
+            self.unpaid_table.setItem(i, 1, amount_item)
+            self.unpaid_table.setItem(i, 2, cat_item)
+            self.unpaid_table.setItem(i, 3, date_item)
+            self.unpaid_table.setItem(i, 4, freq_item)
+
+        # Update Paid Table (History)
+        self.paid_table.setRowCount(0)
+        self.paid_table.setRowCount(len(self.paid_bills))
+        
+        for i, bill in enumerate(self.paid_bills):
+            symbol = self.currencies.get(bill['currency'], '$')
+            
+            
+            name_item = QTableWidgetItem(bill['name'])
+            name_item.setData(Qt.ItemDataRole.UserRole, bill)
+            self.paid_table.setItem(i, 0, name_item)
+            self.paid_table.setItem(i, 1, QTableWidgetItem(f"{symbol}{bill['amount']:,.2f}"))
+            self.paid_table.setItem(i, 2, QTableWidgetItem(bill.get('category', 'Other')))
+            self.paid_table.setItem(i, 3, QTableWidgetItem(bill.get('due_date', '-')))
+            self.paid_table.setItem(i, 4, QTableWidgetItem(bill.get('repeat_freq', '-')))
+    
+    def show_unpaid_context_menu(self, position):
+        """Show context menu for unpaid bills table."""
+        idx = self.unpaid_table.indexAt(position)
+        if not idx.isValid():
+            return
+            
+        row = idx.row()
+        if row < 0 or row >= len(self.unpaid_bills):
+            return
+            
+        bill = self.unpaid_bills[row]
+        
+        menu = QMenu()
+        pay_action = menu.addAction(STRINGS["menu_pay_bill"])
+        edit_action = menu.addAction(STRINGS["menu_edit_bill"])
+        delete_action = menu.addAction(STRINGS["menu_delete_bill"])
+        
+        action = menu.exec(self.unpaid_table.viewport().mapToGlobal(position))
+        
+        if action == pay_action:
+            self.pay_bill(bill)
+        elif action == edit_action:
+            self.edit_bill(bill)
+        elif action == delete_action:
+            self.delete_bill(bill)
+
+    def show_paid_context_menu(self, position):
+        """Show context menu for paid bills table."""
+        idx = self.paid_table.indexAt(position)
+        if not idx.isValid():
+            return
+            
+        row = idx.row()
+        if row < 0 or row >= len(self.paid_bills):
+            return
+            
+        bill = self.paid_bills[row]
+        
+        menu = QMenu()
+        restore_action = menu.addAction(STRINGS["menu_restore_unpaid"])
+        delete_action = menu.addAction(STRINGS["menu_delete_permanently"])
+        
+        action = menu.exec(self.paid_table.viewport().mapToGlobal(position))
+        
+        if action == restore_action:
+            self.paid_bills.pop(row)
+            self.unpaid_bills.append(bill)
+            self.save_data()
+            self.update_display()
+        elif action == delete_action:
+            reply = QMessageBox.question(self, STRINGS["title_confirm_delete_history"], 
+                                       STRINGS["msg_confirm_delete_history"].format(bill['name']),
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                self.paid_bills.pop(row)
+                self.save_data()
+                self.update_display()
+
+    def unpaid_list_item_clicked(self, item):
+        """Handle clicks on unpaid list items (load more)."""
+        if not item:
+            return
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if data == '__load_more__':
+            self._unpaid_page = getattr(self, '_unpaid_page', 1) + 1
+            self.update_display()
+
+    def paid_list_item_clicked(self, item):
+        if not item:
+            return
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if data == '__load_more_paid__':
+            self._paid_page = getattr(self, '_paid_page', 1) + 1
+            self.update_display()
+    
+
+    
+    def edit_bill(self, bill):
+        """Edit an existing bill."""
+        dialog = BillEditorDialog(self, bill, self.currencies)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            updated_data = dialog.get_data()
+            if updated_data:
+                # Find and update the bill
+                for i, b in enumerate(self.unpaid_bills):
+                    if b == bill:
+                        self.unpaid_bills[i] = updated_data
+                        self.save_data()
+                        self.update_display()
+                        break
+    
+    def delete_bill(self, bill):
+        """Delete a bill with confirmation."""
+        reply = QMessageBox.question(self, STRINGS["dialog_confirm_delete"],
+                                   STRINGS["confirm_delete_msg"].format(bill['name']),
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            if bill in self.unpaid_bills:
+                self.unpaid_bills.remove(bill)
+            elif bill in self.paid_bills:
+                self.paid_bills.remove(bill)
+            self.save_data()
+            self.update_display()
+    
+    def sort_by_name(self):
+        self.unpaid_bills.sort(key=lambda b: b['name'].lower())
+        self.update_display()
+    
+    def sort_by_date(self):
+        self.unpaid_bills.sort(key=lambda b: safe_parse_date(b.get('due_date')))
+        self.update_display()
+    
+    def sort_by_amount(self):
+        with self.data_lock:
+            rates = self.exchange_rates.copy()
+        self.unpaid_bills.sort(key=lambda b: b['amount'] / rates.get(b['currency'], 1), reverse=True)
+        self.update_display()
+    
+    def open_converter(self):
+        dialog = ConverterWindow(self, self.currencies, self.exchange_rates)
+        dialog.exec()
+    
+    def open_settings(self):
+        dialog = SettingsDialog(self, self.data_manager)
+        dialog.exec()
+    
+    def clear_data(self):
+        reply = QMessageBox.question(self, STRINGS["dialog_clear_data"],
+                                   STRINGS["confirm_clear_data_msg"],
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.unpaid_bills = []
+            self.paid_bills = []
+            self.budget = 0.0
+            self.save_data()
+            self.update_display()
+            QMessageBox.information(self, STRINGS["info_data_cleared"], STRINGS["info_data_cleared_msg"])
+    
+    def closeEvent(self, event):
+        """Handle window close event with user choice."""
+        self.save_data()
+        
+        # If already marked for real close (from quit_app), just close
+        if self.real_close:
+            event.accept()
+            return
+        
+        # Check if "Minimize to Tray" is enabled
+        config = self.data_manager.load_config()
+        minimize_to_tray = config.get('minimize_to_tray', True)
+        
+        if minimize_to_tray:
+            # Silent minimize to tray
+            event.ignore()
+            self.hide_to_tray()
+        else:
+            # Minimize to tray disabled, just close
+            event.accept()
+
+    def hide_to_tray(self):
+        """Minimize the application to the system tray."""
+        self.hide()
+        if self.tray_icon.isSystemTrayAvailable():
+            self.tray_icon.showMessage(
+                "BillTracker",
+                STRINGS.get("msg_running_background", "Running in background"),
+                QSystemTrayIcon.MessageIcon.Information,
+                2000
+            )
+
+    def quit_app(self):
+        """Properly quit the application."""
+        self.real_close = True
+        self.tray_icon.hide()  # Hide tray icon before quitting
+        QApplication.quit()  # Properly quit the application
+
+    def show_window(self):
+        self.show()
+        self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+        self.activateWindow()
+
+    def show_bill_details(self, item, is_paid=False):
+        """Show details dialog for double-clicked bill."""
+        if not item: return
+        bill = item.data(Qt.ItemDataRole.UserRole)
+        # Verify it's a dict (bill object) and not just a string/int
+        if not isinstance(bill, dict): return
+        
+        dialog = BillDetailsDialog(self, bill, self.currencies, is_paid)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            action = dialog.get_action()
+            if action == 1: # Pay
+                self.pay_bill(bill)
+            elif action == 2: # Edit
+                self.edit_bill(bill)
+            elif action == 3: # Delete
+                self.delete_bill(bill)
+
+    def on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            if self.isVisible():
+                self.hide()
+            else:
+                self.show_window()
+
+    def open_search(self):
+        """Open the global search dialog."""
+        searchDialog = SearchDialog(self, self.unpaid_bills, self.paid_bills, self.currencies)
+        searchDialog.exec()
+
+    def open_currency_search(self, combo_box):
+        """Open searchable currency selector for a combo box."""
+        dialog = CurrencySelectorDialog(self, self.currencies, combo_box.currentText())
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected = dialog.get_selected_currency()
+            if selected:
+                if hasattr(combo_box, 'ensure_populated'):
+                    combo_box.ensure_populated()
+                combo_box.setCurrentText(selected)
+    
+    def quick_add_bill(self):
+        """Open add bill dialog from anywhere using Ctrl+N."""
+        # Switch to Dashboard tab where the add bill form is
+        self.tabs.setCurrentIndex(0)
+        # Focus on the bill name input
+        if hasattr(self, 'bill_name_input'):
+            self.bill_name_input.setFocus()
+
+
+    
+    def export_csv(self):
+        """Export data to CSV."""
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
+        if not file_path:
+            return
+            
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Name', 'Amount', 'Currency', 'Category', 'Frequency', 'Due Date', 'Status'])
+                for b in self.unpaid_bills:
+                    writer.writerow([b['name'], b['amount'], b['currency'], b.get('category', 'Other'), b.get('repeat_freq', 'No Repeat'), b.get('due_date', ''), 'Unpaid'])
+                for b in self.paid_bills:
+                    writer.writerow([b['name'], b['amount'], b['currency'], b.get('category', 'Other'), b.get('repeat_freq', 'No Repeat'), b.get('due_date', ''), 'Paid'])
+            QMessageBox.information(self, "Export Successful", f"Data exported to {file_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Export Error", str(e))
+
+    def export_pdf(self):
+        """Export a summary report to PDF."""
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export PDF", "bill_report.pdf", "PDF Files (*.pdf)")
+        if not file_path:
+            return
+            
+        try:
+            # Generate HTML Content
+            html = f"""
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: sans-serif; }}
+                    h1 {{ color: #3a86ff; text-align: center; }}
+                    h2 {{ color: #8338ec; border-bottom: 2px solid #8338ec; }}
+                    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+                    th {{ background-color: #f2f2f2; padding: 8px; text-align: left; border: 1px solid #ddd; }}
+                    td {{ padding: 8px; border: 1px solid #ddd; }}
+                    .amount {{ font-weight: bold; }}
+                    .unpaid {{ color: #e63946; }}
+                    .paid {{ color: #2a9d8f; }}
+                </style>
+            </head>
+            <body>
+                <h1>BillTracker Report</h1>
+                <p>Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
+                
+                <h2>Budget Overview</h2>
+                <p><b>Total Budget:</b> {self.budget:,.2f}</p>
+                <p><b>Unpaid Bills Count:</b> {len(self.unpaid_bills)}</p>
+                
+                <h2>Unpaid Bills</h2>
+                <table>
+                    <tr><th>Name</th><th>Amount</th><th>Due Date</th><th>Category</th></tr>
+            """
+            
+            for bill in self.unpaid_bills:
+                symbol = self.currencies.get(bill['currency'], '$')
+                html += f"""
+                    <tr>
+                        <td>{bill['name']}</td>
+                        <td class="amount unpaid">{symbol}{bill['amount']:,.2f}</td>
+                        <td>{bill.get('due_date', '-')}</td>
+                        <td>{bill.get('category', '-')}</td>
+                    </tr>
+                """
+                
+            html += """
+                </table>
+                <h2>Recent Paid History</h2>
+                <table>
+                    <tr><th>Name</th><th>Amount</th><th>Paid/Due Date</th><th>Category</th></tr>
+            """
+            
+            for bill in self.paid_bills[:20]: # Limit to last 20
+                symbol = self.currencies.get(bill['currency'], '$')
+                html += f"""
+                    <tr>
+                        <td>{bill['name']}</td>
+                        <td class="amount paid">{symbol}{bill['amount']:,.2f}</td>
+                        <td>{bill.get('due_date', '-')}</td>
+                        <td>{bill.get('category', '-')}</td>
+                    </tr>
+                """
+                
+            html += """
+                </table>
+            </body>
+            </html>
+            """
+            
+            document = QTextDocument()
+            document.setHtml(html)
+            
+            printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+            printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+            printer.setOutputFileName(file_path)
+            
+            document.print(printer)
+            
+            QMessageBox.information(self, "Export Successful", f"Report saved to {file_path}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Export Failed", str(e))
+
+    def toggle_theme(self):
+        self.is_dark_mode = not self.is_dark_mode
+        self.apply_theme()
+        
+        # Save preference
+        config = self.data_manager.load_config()
+        config['dark_mode'] = self.is_dark_mode
+        self.data_manager.save_config(config)
+
+    def apply_theme(self):
+        set_theme(self.is_dark_mode)
+
+if __name__ == "__main__":
+    # Taskbar icon fix
+    myappid = 'grouvya.billtracker.qt.5.3.0'
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    except Exception:
+        pass
+
+    # Initial STRINGS setup is already done at module level
+    
+    
+    app = QApplication(sys.argv)
+    
+    # Apply initial theme (Dark by default for splash and selector)
+    set_theme(True)
+
+    # 1. Check for First Run (Language Selection)
+    config_dir = os.path.join(os.path.expanduser('~'), '.bill_tracker')
+    config_file = os.path.join(config_dir, 'config.json')
+    
+    if not os.path.exists(config_file):
+        # First run! Show language selector
+        selector = LanguageSelectionDialog()
+        if selector.exec() == QDialog.DialogCode.Accepted:
+            selected_lang = selector.selected_language
+            # Save the initial config immediately
+            os.makedirs(config_dir, exist_ok=True)
+            initial_cfg = {
+                'language': selected_lang,
+                'minimize_to_tray': False,
+                'reminder_days': 1,
+                'dark_mode': True
+            }
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(initial_cfg, f, indent=4)
+            
+            # Apply language
+            if selected_lang in TRANSLATIONS:
+                STRINGS = TRANSLATIONS[selected_lang]
+                CATEGORIES = STRINGS["categories_list"]
+                FREQUENCIES = STRINGS["frequencies_list"]
+        else:
+            sys.exit(0) # User cancelled
+    else:
+        # Load Existing Language Preference
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+                lang = cfg.get('language', 'English')
+                if lang in TRANSLATIONS:
+                    STRINGS = TRANSLATIONS[lang]
+                    CATEGORIES = STRINGS["categories_list"]
+                    FREQUENCIES = STRINGS["frequencies_list"]
+        except Exception as e:
+            print(f"Error loading language: {e}")
+
+    app.setWindowIcon(QIcon(resource_path('calc.ico')))
+    
+    # Show splash screen
+    splash = SplashScreen()
+    splash.show()
+    app.processEvents()
+    
+    # Simulate initialization with progress updates
+    splash.update_progress(10, "Loading configuration...")
+    QTimer.singleShot(100, lambda: None)  # Small delay for visual effect
+    app.processEvents()
+    
+    splash.update_progress(30, "Initializing security...")
+    QTimer.singleShot(100, lambda: None)
+    app.processEvents()
+    
+    splash.update_progress(50, "Loading exchange rates...")
+    QTimer.singleShot(100, lambda: None)
+    app.processEvents()
+    
+    splash.update_progress(70, "Preparing interface...")
+    window = BillTrackerWindow()
+    app.processEvents()
+    
+    splash.update_progress(90, "Finalizing...")
+    QTimer.singleShot(100, lambda: None)
+    app.processEvents()
+    
+    splash.update_progress(100, "Ready!")
+    
+    # Close splash and show main window
+    QTimer.singleShot(500, splash.close)
+    QTimer.singleShot(600, window.show)
+    
+    sys.exit(app.exec())
+

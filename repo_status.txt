@@ -1,0 +1,9 @@
+config*
+extensions/
+objects/
+refs/
+state/
+summaries/
+summary
+summary.idx
+tmp/

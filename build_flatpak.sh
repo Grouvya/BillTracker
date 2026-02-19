@@ -2,11 +2,18 @@
 set -e
 
 # Check for flatpak-builder
-if ! command -v flatpak-builder &> /dev/null; then
+if command -v flatpak-builder &> /dev/null; then
+    BUILDER="flatpak-builder"
+elif flatpak list --app | grep -q org.flatpak.Builder; then
+    BUILDER="flatpak run org.flatpak.Builder"
+else
     echo "Error: flatpak-builder is not installed."
-    echo "Please install it using: sudo apt install flatpak-builder"
+    echo "Please install it using: flatpak install flathub org.flatpak.Builder"
+    echo "Or: sudo rpm-ostree install flatpak-builder"
     exit 1
 fi
+
+echo "Using builder: $BUILDER"
 
 # Ensure Flathub remote exists
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -32,7 +39,8 @@ echo "Generating Python dependencies..."
 echo "Building Flatpak..."
 mkdir -p build_dir
 mkdir -p repo
-flatpak-builder --force-clean --repo=repo --install --user --install-deps-from=flathub build_dir org.grouvya.BillTracker.json
+# Build
+$BUILDER -v --user --install --force-clean build_dir org.grouvya.BillTracker.json
 
 echo "Build complete! installed to user installation."
 echo "Run with: flatpak run org.grouvya.BillTracker"

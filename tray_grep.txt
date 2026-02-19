@@ -1,0 +1,6 @@
+59:    QMenu, QAbstractItemView, QGraphicsDropShadowEffect, QGraphicsBlurEffect, QSystemTrayIcon, QTabWidget,
+5021:            self.tray_icon = QSystemTrayIcon(self)
+5791:                                             QSystemTrayIcon.MessageIcon.Information, 3000)
+5938:                QSystemTrayIcon.MessageIcon.Information,
+6872:                QSystemTrayIcon.MessageIcon.Information,
+6910:        if reason == QSystemTrayIcon.ActivationReason.Trigger:

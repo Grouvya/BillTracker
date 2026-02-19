@@ -15,7 +15,9 @@
         "--socket=wayland",
         "--device=dri",
         "--share=network",
-        "--filesystem=home"
+        "--filesystem=home",
+        "--talk-name=org.kde.StatusNotifierWatcher",
+        "--talk-name=org.freedesktop.Notifications"
     ],
     "build-options": {
         "append-path": "/usr/lib/sdk/rust-stable/bin",
@@ -30,6 +32,8 @@
             "buildsystem": "simple",
             "build-commands": [
                 "install -D Billtracker_qt.py /app/bin/billtracker",
+                "cp -r icons /app/bin/",
+                "install -D billtracker.png /app/bin/billtracker.png",
                 "install -D billtracker_512.png /app/share/icons/hicolor/512x512/apps/org.grouvya.BillTracker.png",
                 "install -D org.grouvya.BillTracker.desktop /app/share/applications/org.grouvya.BillTracker.desktop",
                 "install -D org.grouvya.BillTracker.metainfo.xml /app/share/metainfo/org.grouvya.BillTracker.metainfo.xml",
@@ -39,10 +43,37 @@
             ],
             "sources": [
                 {
-                    "type": "git",
-                    "url": "https://github.com/grouvya/BillTracker.git",
-                    "tag": "v7.4.0",
-                    "commit": "YOUR_COMMIT_HASH_HERE"
+                    "type": "file",
+                    "path": "Billtracker_qt.py"
+                },
+                {
+                    "type": "dir",
+                    "path": "icons",
+                    "dest": "icons"
+                },
+                {
+                    "type": "file",
+                    "path": "billtracker.png"
+                },
+                {
+                    "type": "file",
+                    "path": "billtracker_512.png"
+                },
+                {
+                    "type": "file",
+                    "path": "org.grouvya.BillTracker.desktop"
+                },
+                {
+                    "type": "file",
+                    "path": "org.grouvya.BillTracker.metainfo.xml"
+                },
+                {
+                    "type": "file",
+                    "path": "README.md"
+                },
+                {
+                    "type": "file",
+                    "path": "README_GE.md"
                 }
             ]
         }

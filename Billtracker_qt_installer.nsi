@@ -8,8 +8,12 @@
   Name "Billtracker"
   OutFile "Billtracker_qt_Installer.exe"
   Unicode True
-  VIProductVersion "5.5.0.0"
-  VIAddVersionKey "FileVersion" "5.5.0 Cross-Platform"
+  VIProductVersion "7.4.0.0"
+  VIAddVersionKey "FileVersion" "7.4.0"
+  VIAddVersionKey "ProductName" "BillTracker"
+  VIAddVersionKey "CompanyName" "Grouvya"
+  VIAddVersionKey "FileDescription" "Personal Bill and Expense Tracker"
+  VIAddVersionKey "LegalCopyright" "(c) 2026 Grouvya"
 
   ;Default Installation Directory
   InstallDir "$PROGRAMFILES\Billtracker"
@@ -28,8 +32,8 @@
   !include "LogicLib.nsh"
 
   !define MUI_ABORTWARNING
-  !define MUI_ICON "calc.ico"
-  !define MUI_UNICON "calc.ico"
+  !define MUI_ICON "billtracker.ico"
+  !define MUI_UNICON "billtracker.ico"
 
 ;--------------------------------
 ;Functions

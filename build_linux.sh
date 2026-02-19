@@ -3,19 +3,19 @@
 
 set -e  # Exit on error
 
-VERSION="5.5.0"
+VERSION="7.1.15"
 APP_NAME="BillTracker"
 BUILD_DIR="dist"
 APPDIR="${BUILD_DIR}/${APP_NAME}.AppDir"
 
 echo "Building ${APP_NAME} for Linux..."
 
-# Install dependencies
-pip install -r requirements.txt
-pip install pyinstaller
+# Install dependencies using local venv
+./venv_linux/bin/pip install -r requirements.txt
+./venv_linux/bin/pip install pyinstaller
 
-# Build with PyInstaller
-pyinstaller Billtracker_qt.spec --clean --noconfirm
+# Build with PyInstaller using local venv
+./venv_linux/bin/pyinstaller Billtracker_qt.spec --clean --noconfirm
 
 echo "Build complete! Executable is in ${BUILD_DIR}/Billtracker_qt"
 

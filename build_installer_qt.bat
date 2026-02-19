@@ -13,4 +13,4 @@ if exist Billtracker_qt_Installer.exe (
     echo Installer build failed. Check the output above for errors.
 )
 
-pause
+REM pause
