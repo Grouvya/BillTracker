@@ -8,8 +8,8 @@
   Name "Billtracker"
   OutFile "Billtracker_qt_Installer.exe"
   Unicode True
-  VIProductVersion "7.4.0.0"
-  VIAddVersionKey "FileVersion" "7.4.0"
+  VIProductVersion "7.6.0.0"
+  VIAddVersionKey "FileVersion" "7.6.0"
   VIAddVersionKey "ProductName" "BillTracker"
   VIAddVersionKey "CompanyName" "Grouvya"
   VIAddVersionKey "FileDescription" "Personal Bill and Expense Tracker"
@@ -77,8 +77,9 @@ Section "Billtracker" SecDummy
   
   ;ADD YOUR OWN FILES HERE...
   File "dist\Billtracker_qt.exe"
-  ; If there are other dependencies in dist, include them here. 
-  ; For a single-file exe from PyInstaller, usually just the exe is enough.
+  File "billtracker.ico"
+  File "billtracker.png"
+  File "tray.ico"
   
   ;Store installation folder
   WriteRegStr HKCU "Software\Billtracker" "" $INSTDIR
@@ -88,13 +89,13 @@ Section "Billtracker" SecDummy
   
   ;Create Shortcuts
   CreateDirectory "$SMPROGRAMS\Billtracker"
-  CreateShortcut "$SMPROGRAMS\Billtracker\Billtracker.lnk" "$INSTDIR\Billtracker_qt.exe"
+  CreateShortcut "$SMPROGRAMS\Billtracker\Billtracker.lnk" "$INSTDIR\Billtracker_qt.exe" "" "$INSTDIR\billtracker.ico" 0
   CreateShortcut "$SMPROGRAMS\Billtracker\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
 
 SectionEnd
 
 Section "Desktop Shortcut" SecDesktop
-  CreateShortcut "$DESKTOP\Billtracker.lnk" "$INSTDIR\Billtracker_qt.exe"
+  CreateShortcut "$DESKTOP\Billtracker.lnk" "$INSTDIR\Billtracker_qt.exe" "" "$INSTDIR\billtracker.ico" 0
 SectionEnd
 
 ;--------------------------------

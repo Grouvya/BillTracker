@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Version 7.4.0 (Security & Stability)
+# Version 7.5.2 (Modern UI & Currency Features)
 # To run: pip install PyQt6 cryptography
 
-__version__ = '7.4.0'
+__version__ = '7.6.0'
 
 import sys
 import os
@@ -63,9 +63,12 @@ from PyQt6.QtWidgets import (
     QListWidgetItem, QGroupBox, QGridLayout, QDoubleSpinBox, QInputDialog, QListWidgetItem as ListItem,
     QMenu, QAbstractItemView, QGraphicsDropShadowEffect, QGraphicsBlurEffect, QSystemTrayIcon, QTabWidget,
     QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QCalendarWidget, QSpinBox, QDialogButtonBox,
-    QFrame, QStyle
+    QFrame, QStyle, QAbstractButton
 )
-from PyQt6.QtCore import Qt, QTimer, QDate, QThread, pyqtSignal, QPoint, QRectF, QRect
+from PyQt6.QtCore import (
+    Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve, QUrl, QDate, QPoint, QRect, QEvent,
+    QThread, pyqtSignal, QRectF
+)
 from PyQt6.QtGui import QFont, QColor, QAction, QIcon, QPalette, QPainter, QPen, QBrush, QTextDocument, QShortcut, QKeySequence, QPainterPath
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt6.QtNetwork import QLocalServer, QLocalSocket
@@ -1419,6 +1422,59 @@ class DataManager:
             logging.error(f"Failed to clear lockout state: {e}")
     
 
+# --- Helper Classes ---
+
+class DraggableFrame(QFrame):
+    """A QFrame that allows the parent window to be dragged by clicking/dragging this frame."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.dragPosition = None
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            # SAFETY CHECK: Identify the actual widget under the mouse (Global Hit Test)
+            global_pos = event.globalPosition().toPoint()
+            widget = QApplication.widgetAt(global_pos)
+            
+            # Walk up to check for interactive parents (like QAbstractButton)
+            temp = widget
+            while temp:
+                if isinstance(temp, (QPushButton, QAbstractButton, QLineEdit, QComboBox, QAbstractItemView)):
+                    super().mousePressEvent(event)
+                    return
+                # Stop if we reach this frame (meaning we clicked background/label inside this frame)
+                if temp == self:
+                    break
+                # Stop if we reach a window boundary
+                if temp.isWindow():
+                    break
+                temp = temp.parent()
+
+            # Try the native Wayland/X11 move method first
+            try:
+                window = self.window()
+                if window.windowHandle():
+                    if window.windowHandle().startSystemMove():
+                        event.accept()
+                        return
+            except Exception:
+                pass
+
+            # Fallback to manual calculation
+            self.dragPosition = event.globalPosition().toPoint() - window.frameGeometry().topLeft()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.MouseButton.LeftButton and self.dragPosition:
+            # Move the window, not just the frame
+            self.window().move(event.globalPosition().toPoint() - self.dragPosition)
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+
+
 class APIThread(QThread):
     """Background thread for fetching currency rates."""
     finished = pyqtSignal(dict)
@@ -1825,20 +1881,29 @@ class LazyCombo(_QComboBox):
         super().setCurrentIndex(index)
 
 
-class ToastNotification(QDialog):
+class ToastNotification(QWidget):
     """Beautiful, interactive floating notification in the bottom right corner."""
-    def __init__(self, parent, bills, theme_manager):
-        super().__init__(parent, Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
-        self.bills = bills
+    def __init__(self, parent, bills_or_msg, theme_manager):
+        # Independent window (QWidget instead of QDialog to avoid KWin centering enforcement)
+        super().__init__(None) 
+        self.main_window = parent # Store reference since we passed None to super()
+        # Reverting to Tool: SplashScreen disabled input on Wayland. Tool is visible and interactive.
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
+        
         self.theme_manager = theme_manager
         self.setFixedWidth(350)
+        
+        # Determine content type
+        self.is_simple_msg = isinstance(bills_or_msg, str)
+        self.bills = [] if self.is_simple_msg else bills_or_msg
+        self.message = bills_or_msg if self.is_simple_msg else ""
         
         # Apply current theme
         self.setStyleSheet(self.theme_manager.get_stylesheet())
         p = self.theme_manager.get_palette()
         accent = self.theme_manager.accent_color
         
-        self.main_frame = QFrame(self)
+        self.main_frame = DraggableFrame(self)
         self.main_frame.setStyleSheet(f"""
             QFrame {{
                 background-color: {p['surface']};
@@ -1854,7 +1919,8 @@ class ToastNotification(QDialog):
         # Header
         header = QHBoxLayout()
         header.setContentsMargins(5, 5, 5, 5)
-        title_lbl = QLabel("🔔 " + STRINGS["notification_title"])
+        title_text = STRINGS.get("app_title", "BillTracker") if self.is_simple_msg else "🔔 " + STRINGS["notification_title"]
+        title_lbl = QLabel(title_text)
         title_lbl.setStyleSheet("font-weight: bold; font-size: 13pt; color: white;")
         header.addWidget(title_lbl)
         
@@ -1865,95 +1931,99 @@ class ToastNotification(QDialog):
         header.addWidget(close_btn)
         content_layout.addLayout(header)
         
-        # Bills List
-        bills_scroll = QScrollArea()
-        bills_scroll.setWidgetResizable(True)
-        bills_scroll.setMaximumHeight(200)
-        bills_scroll.setStyleSheet("border: none; background: transparent;")
-        
-        container = QWidget()
-        container.setStyleSheet("background: transparent;")
-        container_layout = QVBoxLayout(container)
-        
-        for bill in self.bills[:5]: # Show top 5
-            try:
-                row = QHBoxLayout()
-                
-                # Format: "Name - $10.00 (Due: Today)"
-                symbol = bill.get('symbol')
-                if not symbol:
-                    # Robust lookup if symbol is missing in bill dict
-                    symbol = "$" # Default
-                    parent = self.parent()
-                    if parent and hasattr(parent, 'currencies') and hasattr(parent, 'currencies_map'):
-                        curr_code = bill.get('currency', '$ (USD)')
-                        symbol = parent.currencies.get(parent.currencies_map.get(curr_code, '$ (USD)'), {}).get('symbol', '$')
-                
-                amount = bill.get('amount', 0.0)
-                name = bill.get('name', 'Unnamed Bill')
-                due_date = bill.get('due_date', 'No Date')
-                
-                text = f"<b>{name}</b><br>{symbol}{amount:,.2f} - {due_date}"
-                lbl = QLabel(text)
-                lbl.setStyleSheet("font-size: 10pt;")
-                row.addWidget(lbl)
-                
-                pay_btn = QPushButton(STRINGS["btn_mark_paid"])
-                pay_btn.setMinimumWidth(100)
-                pay_btn.setStyleSheet(f"""
-                    QPushButton {{
-                        font-size: 9pt; 
-                        padding: 6px; 
-                        background-color: {p['success']}; 
-                        color: white; 
-                        border-radius: 4px; 
-                        font-weight: bold;
-                    }}
-                    QPushButton:hover {{
-                        background-color: #2a9d8f;
-                    }}
-                """)
-                # Connect via lambda but need to handle closure
-                pay_btn.clicked.connect(lambda checked, b=bill: self.mark_bill_paid(b))
-                row.addWidget(pay_btn)
-                container_layout.addLayout(row)
-            except Exception as e:
-                logging.error(f"Error rendering toast row: {e}")
-                continue
-        
-        if len(self.bills) > 5:
-            container_layout.addWidget(QLabel(f"<i>+ {len(self.bills)-5} more...</i>"))
+        if self.is_simple_msg:
+             # Simple Text Message
+             msg_label = QLabel(self.message)
+             msg_label.setWordWrap(True)
+             msg_label.setStyleSheet(f"font-size: 11pt; color: {p['text']}; padding: 10px;")
+             content_layout.addWidget(msg_label)
+             
+             # Auto-close timer for simple messages
+             QTimer.singleShot(4000, self.close)
+        else:
+            # Complex Bill List
+            bills_scroll = QScrollArea()
+            bills_scroll.setWidgetResizable(True)
+            bills_scroll.setMaximumHeight(200)
+            bills_scroll.setStyleSheet("border: none; background: transparent;")
             
-        bills_scroll.setWidget(container)
-        content_layout.addWidget(bills_scroll)
+            container = QWidget()
+            container.setStyleSheet("background: transparent;")
+            container_layout = QVBoxLayout(container)
+
         
-        # Global Footer
-        footer = QHBoxLayout()
-        open_btn = QPushButton(STRINGS["btn_view_details"])
-        open_btn.setMinimumHeight(40)
-        footer_contrast = self.theme_manager.get_contrast_color(accent)
-        open_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {accent}; 
-                color: {footer_contrast}; 
-                font-weight: bold; 
-                border-radius: 6px;
-                font-size: 10pt;
-            }}
-            QPushButton:hover {{
-                background-color: {accent};
-                opacity: 0.9;
-            }}
-        """)
-        open_btn.clicked.connect(self.open_app)
-        footer.addWidget(open_btn)
-        content_layout.addLayout(footer)
-        
+            for bill in self.bills[:5]: # Show top 5
+                try:
+                    row = QHBoxLayout()
+                    
+                    # Format: "Name - $10.00 (Due: Today)"
+                    symbol = bill.get('symbol')
+                    if not symbol:
+                        # Robust lookup if symbol is missing in bill dict
+                        symbol = "$" # Default
+                        parent = None # Parent is None
+                    
+                    amount = bill.get('amount', 0.0)
+                    name = bill.get('name', 'Unnamed Bill')
+                    due_date = bill.get('due_date', 'No Date')
+                    
+                    text = f"<b>{name}</b><br>{symbol}{amount:,.2f} - {due_date}"
+                    lbl = QLabel(text)
+                    lbl.setStyleSheet("font-size: 10pt;")
+                    row.addWidget(lbl)
+                    
+                    pay_btn = QPushButton(STRINGS["btn_mark_paid"])
+                    pay_btn.setMinimumWidth(100)
+                    pay_btn.setStyleSheet(f"""
+                        QPushButton {{
+                            font-size: 9pt; 
+                            padding: 6px; 
+                            background-color: {p['success']}; 
+                            color: white; 
+                            border-radius: 4px; 
+                            font-weight: bold;
+                        }}
+                        QPushButton:hover {{
+                            background-color: #2a9d8f;
+                        }}
+                    """)
+                    # Connect via lambda but need to handle closure
+                    pay_btn.clicked.connect(lambda checked, b=bill: self.mark_bill_paid(b))
+                    row.addWidget(pay_btn)
+                    container_layout.addLayout(row)
+                except Exception as e:
+                    logging.error(f"Error rendering toast row: {e}")
+                    continue
+            
+            if len(self.bills) > 5:
+                container_layout.addWidget(QLabel(f"<i>+ {len(self.bills)-5} more...</i>"))
+                
+            bills_scroll.setWidget(container)
+            content_layout.addWidget(bills_scroll)
+            
+            # Global Footer (Only for bills)
+            footer = QHBoxLayout()
+            open_btn = QPushButton(STRINGS["btn_view_details"])
+            open_btn.setMinimumHeight(40)
+            footer_contrast = self.theme_manager.get_contrast_color(accent)
+            open_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {accent}; 
+                    color: {footer_contrast}; 
+                    font-weight: bold; 
+                    border-radius: 6px;
+                    font-size: 10pt;
+                }}
+                QPushButton:hover {{
+                    background-color: {accent};
+                    opacity: 0.9;
+                }}
+            """)
+            open_btn.clicked.connect(self.open_app)
+            footer.addWidget(open_btn)
+            content_layout.addLayout(footer)
+            
         main_layout.addWidget(self.main_frame)
-        
-        # Position at top right
-        screen = QApplication.primaryScreen().geometry()
-        self.move(screen.width() - self.width() - 20, 40)
         
         # Audio notification (Windows only)
         if platform.system() == 'Windows':
@@ -1961,19 +2031,37 @@ class ToastNotification(QDialog):
                 winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS | winsound.SND_ASYNC)
             except: pass
             
-        # Auto-close after 15 seconds
-        QTimer.singleShot(15000, self.close)
+        # Auto-close after 15 seconds if it's a bill list (simple msg has its own timer created earlier)
+        if not self.is_simple_msg:
+            QTimer.singleShot(15000, self.close)
+
+    def position_top_right(self):
+        """Force position to top-right (User Request)."""
+        screen = QApplication.primaryScreen()
+        if screen:
+            geo = screen.availableGeometry()
+            # 20px margin
+            x = geo.right() - self.width() - 20
+            y = geo.top() + 40 # Standard top margin
+            self.move(x, y)
+
+    def showEvent(self, event):
+        super().showEvent(event) # Just call super, rely on delayed move
+
+    def show_toast(self, duration=3000):
+        """Show the toast and auto-close after duration."""
+        self.show()
+        # DELAYED MOVE: Essential for KDE/Wayland which might center initially
+        QTimer.singleShot(100, self.position_top_right)
 
     def mark_bill_paid(self, bill):
-        parent = self.parent()
-        if parent and hasattr(parent, 'pay_bill'):
-            parent.pay_bill(bill)
+        if self.main_window and hasattr(self.main_window, 'pay_bill'):
+            self.main_window.pay_bill(bill)
         self.close()
         
     def open_app(self):
-        parent = self.parent()
-        if parent and hasattr(parent, 'show_window'):
-            parent.show_window()
+        if self.main_window and hasattr(self.main_window, 'show_window'):
+            self.main_window.show_window()
         self.close()
 
 class PinEntryDialog(QDialog):
@@ -2256,6 +2344,7 @@ class BillEditorDialog(QDialog):
         currency_layout.addWidget(self.currency_combo)
         
         search_currency_btn = QPushButton(STRINGS["btn_search"])
+        search_currency_btn.setIcon(get_icon("search"))
         search_currency_btn.clicked.connect(self.open_currency_selector)
         currency_layout.addWidget(search_currency_btn)
         layout.addRow(STRINGS["currency_label"] + ":", currency_layout)
@@ -2568,6 +2657,22 @@ class SavingsTab(QWidget):
         add_goal_btn.clicked.connect(self.add_goal)
         summary_layout.addWidget(add_goal_btn, 1, 0)
         
+        # Currency Selector for Summary
+        curr_row = QHBoxLayout()
+        curr_row.addWidget(QLabel(STRINGS["summarize_in_label"]))
+        self.savings_currency_combo = LazyCombo(items_provider=self.main_window.get_filtered_currency_list, pending_text=None)
+        self.savings_currency_combo.currentTextChanged.connect(lambda: self.refresh_data())
+        self.savings_currency_combo.currentTextChanged.connect(lambda: self.main_window.save_data())
+        curr_row.addWidget(self.savings_currency_combo)
+        
+        search_btn = QPushButton(STRINGS["sort_name_button"])
+        search_btn.setIcon(get_icon("search"))
+        search_btn.clicked.connect(lambda: self.main_window.open_currency_search(self.savings_currency_combo))
+        curr_row.addWidget(search_btn)
+        
+        curr_row.addStretch()
+        summary_layout.addLayout(curr_row, 2, 0, 1, 2)
+        
         summary_group.setLayout(summary_layout)
         layout.addWidget(summary_group)
         
@@ -2626,6 +2731,35 @@ class SavingsTab(QWidget):
             
         total_saved_usd = 0.0
         
+        # 1. Determine Target Currency (Moved outside loop to fix UnboundLocalError)
+        target_curr = self.savings_currency_combo.currentText()
+        if not target_curr:
+            # Fallback
+            target_curr = self.main_window.summary_currency_combo.currentText() or "USD"
+            
+        # Extract code usually needed for metadata lookup/symbol
+        import re
+        t_match = re.search(r'\((.*?)\)', target_curr)
+        target_curr_code = t_match.group(1) if t_match else None
+        
+        # 2. Get Target Rate (to_rate) - Constant for all items
+        to_rate = 1.0 # Default
+        
+        # Find to_rate
+        found = False
+        for k, v in self.main_window.exchange_rates.items():
+            if k == target_curr:
+                to_rate = v
+                found = True
+                break
+        
+        if not found and target_curr_code:
+             # Fallback search by code
+             for k, v in self.main_window.exchange_rates.items():
+                if f"({target_curr_code})" in k:
+                    to_rate = v
+                    break
+        
         for i, goal in enumerate(self.main_window.savings_goals):
             p = self.main_window.theme_manager.get_palette()
             goal_card = QFrame()
@@ -2683,13 +2817,29 @@ class SavingsTab(QWidget):
             
             self.goals_layout.addWidget(goal_card)
             
-            # Convert to USD for total summary (Ensure robust rate lookup)
-            rate = self.main_window.get_exchange_rate(goal['currency'])
+            # Convert to selected summary currency
+            # Rate of goal currency (relative to base)
+            from_rate = self.main_window.get_exchange_rate(goal['currency'])
             
-            if rate > 0:
-                total_saved_usd += cur / (rate or 1.0)
+            if from_rate > 0:
+                # Convert goal current amount -> Base -> Target
+                val_in_target = (cur / from_rate) * to_rate
+                total_saved_usd += val_in_target
 
-        self.total_saved_label.setText(f"Total Saved: ${total_saved_usd:,.2f} (USD)")
+        # Get Symbol for target
+        t_meta = self.main_window.currencies.get(target_curr, {'symbol': '$'})
+        t_symbol = t_meta.get('symbol', '$') if isinstance(t_meta, dict) else t_meta
+        
+        # If target_curr is just "USD" or code, symbol lookup might fail if keys are full names
+        # Attempt to find better symbol if default '$' returned and currency is not USD
+        if t_symbol == '$' and "USD" not in target_curr and "Dollar" not in target_curr:
+             # Try to find symbol from currency list
+             for k, v in self.main_window.currencies.items():
+                 if k == target_curr:
+                     t_symbol = v.get('symbol', '$') if isinstance(v, dict) else v
+                     break
+        
+        self.total_saved_label.setText(f"{STRINGS['lbl_total_saved']} {t_symbol}{total_saved_usd:,.2f} ({target_curr})")
 
 
 class BillDetailsDialog(QDialog):
@@ -2844,6 +2994,8 @@ def get_full_categories(custom_list):
     return STRINGS['categories_list'] + custom_list
 
 
+
+
 class MiniTrackerWidget(QWidget):
     """A compact, always-on-top widget for quick budget/due bills check."""
     def __init__(self, parent=None, strings=None, theme_manager=None):
@@ -2851,15 +3003,34 @@ class MiniTrackerWidget(QWidget):
         self.main_window = parent
         self.STRINGS = strings
         self.theme_manager = theme_manager
+        # Tool: Interactive and visible (unlike SplashScreen on Wayland)
         self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
         self.init_ui()
         self.update_data()
         
+        # Position Bottom Right on Init
+        # DELAYED MOVE: 100ms to allow WM to map window first
+        QTimer.singleShot(100, self.position_bottom_right)
+        
+    def position_bottom_right(self):
+        screen = QApplication.primaryScreen()
+        if screen:
+            self.adjustSize() # Ensure correct size before calculating
+            geo = screen.availableGeometry()
+            # 20px margin
+            x = geo.right() - self.width() - 20
+            y = geo.bottom() - self.height() - 20
+            self.move(x, y)
+
+    # Mouse events now handled by DraggableFrame container
+        
     def init_ui(self):
         self.layout = QVBoxLayout()
-        self.container = QFrame()
+        # Use DraggableFrame to capture clicks even on child widgets if they bubble up,
+        # but primarily to provide a solid drag surface.
+        self.container = DraggableFrame()
         self.container.setObjectName("MiniContainer")
         
         # Style based on theme
@@ -2953,15 +3124,6 @@ class MiniTrackerWidget(QWidget):
         screen = QApplication.primaryScreen().availableGeometry()
         self.move(screen.width() - 270, screen.height() - 190)
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-            event.accept()
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            self.move(event.globalPosition().toPoint() - self.drag_pos)
-            event.accept()
 
     def update_data(self):
         if not self.main_window: return
@@ -3207,13 +3369,13 @@ class SettingsDialog(QDialog):
         loc_row.addWidget(self.backup_path_input)
         
         browse_backup_btn = QPushButton()
-        browse_backup_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DirOpenIcon))
+        browse_backup_btn.setIcon(get_icon("folder-open"))  # Fallback or create folder-open
         browse_backup_btn.setFixedWidth(30)
         browse_backup_btn.clicked.connect(self.browse_backup_location)
         loc_row.addWidget(browse_backup_btn)
         
         reset_backup_btn = QPushButton()
-        reset_backup_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        reset_backup_btn.setIcon(get_icon("refresh"))
         reset_backup_btn.setFixedWidth(30)
         reset_backup_btn.setToolTip(STRINGS["btn_reset_default"])
         reset_backup_btn.clicked.connect(self.reset_backup_location)
@@ -4379,6 +4541,23 @@ class SubscriptionTab(QWidget):
         self.yearly_burn_label.setStyleSheet("opacity: 0.8; font-size: 11pt;")
         summary_layout.addWidget(self.yearly_burn_label)
         
+        # Currency Selector for Summary
+        curr_row = QHBoxLayout()
+        curr_row.addWidget(QLabel(STRINGS["summarize_in_label"]))
+        self.sub_currency_combo = LazyCombo(items_provider=self.main_window.get_filtered_currency_list, pending_text=None)
+        # Connect to refresh data when changed
+        self.sub_currency_combo.currentTextChanged.connect(lambda: self.refresh_data())
+        self.sub_currency_combo.currentTextChanged.connect(lambda: self.main_window.save_data())
+        curr_row.addWidget(self.sub_currency_combo)
+        
+        search_btn = QPushButton(STRINGS["sort_name_button"])
+        search_btn.setIcon(get_icon("search"))
+        search_btn.clicked.connect(lambda: self.main_window.open_currency_search(self.sub_currency_combo))
+        curr_row.addWidget(search_btn)
+        
+        curr_row.addStretch()
+        summary_layout.addLayout(curr_row)
+        
         layout.addWidget(self.summary_card)
         
         # List of Subscriptions
@@ -4457,16 +4636,35 @@ class SubscriptionTab(QWidget):
         subscriptions = [b for b in self.main_window.unpaid_bills if b.get('is_subscription', False) or b.get('repeat_freq', 'No Repeat') != 'No Repeat']
         
         total_monthly_burn = 0.0
-        # Sync with main window's summary currency preference
-        target_curr = self.main_window.summary_currency_combo.currentText()
+        # 1. Determine Target Currency
+        target_curr = self.sub_currency_combo.currentText()
         if not target_curr:
-            target_curr = "USD"
+            # Fallback to main summary if nothing selected yet
+            target_curr = self.main_window.summary_currency_combo.currentText()
+            if not target_curr:
+                target_curr = "USD"
         
-        # Extract code if needed ($ (USD) -> USD)
+        # Extract code usually needed for metadata lookup
         import re
-        curr_match = re.search(r'\((.*?)\)', target_curr)
-        if curr_match:
-            target_curr = curr_match.group(1)
+        t_match = re.search(r'\((.*?)\)', target_curr)
+        target_curr_code = t_match.group(1) if t_match else None
+        
+        # 2. Get Target Rate
+        to_rate = 1.0 # Default
+        found_rate = False
+        
+        # Try direct key match first
+        if target_curr in self.main_window.exchange_rates:
+            to_rate = self.main_window.exchange_rates[target_curr]
+            found_rate = True
+            
+        # Fallback to code search
+        if not found_rate and target_curr_code:
+            for k, v in self.main_window.exchange_rates.items():
+                if f"({target_curr_code})" in k:
+                    to_rate = v
+                    found_rate = True
+                    break
             
         today = date.today()
         for sub in subscriptions:
@@ -4488,15 +4686,8 @@ class SubscriptionTab(QWidget):
                 
             # Convert to summary currency
             from_rate = self.main_window.exchange_rates.get(sub['currency'], 1.0)
-            # Find target rate in exchange_rates dict (which uses codes usually, but check)
-            # The exchange_rates dict keys are full names like "$ (USD)" in some places, 
-            # let's find the correct key for target_curr code
-            to_rate = 1.0
-            for k, v in self.main_window.exchange_rates.items():
-                if f"({target_curr})" in k:
-                    to_rate = v
-                    break
             
+            # Use pre-calculated to_rate
             if from_rate > 0:
                 cost_converted = (monthly_cost / from_rate) * to_rate
                 total_monthly_burn += cost_converted
@@ -4529,10 +4720,21 @@ class SubscriptionTab(QWidget):
             
         # Get symbol for target currency
         symbol_target = "$"
-        for k, v in self.main_window.currencies.items():
-            if f"({target_curr})" in k:
-                symbol_target = v
-                break
+        
+        # Try direct match in currencies
+        if target_curr in self.main_window.currencies:
+            meta = self.main_window.currencies[target_curr]
+            symbol_target = meta.get('symbol', '$') if isinstance(meta, dict) else meta
+            
+        # Fallback to code match if needed
+        elif target_curr_code:
+             for k, v in self.main_window.currencies.items():
+                if f"({target_curr_code})" in k:
+                    symbol_target = v.get('symbol', '$') if isinstance(v, dict) else v
+                    break
+        
+        # Fallback: if we still have default '$' but target is not USD, try harder?
+        # (Optional, but usually direct match works if combo is populated from keys)
                 
         self.burn_rate_label.setText(f"{symbol_target}{total_monthly_burn:,.2f}")
         self.yearly_burn_label.setText(f"{STRINGS['lbl_yearly_burn']}: {symbol_target}{total_monthly_burn * 12:,.2f}")
@@ -5252,12 +5454,12 @@ class BillTrackerWindow(QMainWindow):
         mini_row = QHBoxLayout()
         mini_row.addStretch()
         self.btn_mini = QPushButton(STRINGS["btn_switch_mini"])
-        self.btn_mini.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarNormalButton))
+        self.btn_mini.setIcon(get_icon("minimize"))
         self.btn_mini.clicked.connect(self.switch_to_mini_mode)
         mini_row.addWidget(self.btn_mini)
         
         self.btn_import = QPushButton(STRINGS["btn_import_csv"])
-        self.btn_import.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon))
+        self.btn_import.setIcon(get_icon("file-csv"))
         self.btn_import.clicked.connect(self.import_bank_statement)
         mini_row.addWidget(self.btn_import)
         
@@ -5273,7 +5475,8 @@ class BillTrackerWindow(QMainWindow):
         # Use lazy combo to avoid populating all currencies on startup
         self.budget_currency_combo = LazyCombo(items_provider=self.get_filtered_currency_list, pending_text=None)
         budget_layout.addWidget(self.budget_currency_combo)
-        budget_search_btn = QPushButton("🔍 " + STRINGS["sort_name_button"])
+        budget_search_btn = QPushButton(STRINGS["sort_name_button"])
+        budget_search_btn.setIcon(get_icon("search"))
         budget_search_btn.clicked.connect(lambda: self.open_currency_search(self.budget_currency_combo))
         budget_layout.addWidget(budget_search_btn)
         
@@ -5318,8 +5521,8 @@ class BillTrackerWindow(QMainWindow):
         self.bill_currency_combo = LazyCombo(items_provider=self.get_filtered_currency_list, pending_text=None)
         self.bill_currency_combo.currentTextChanged.connect(self.on_currency_changed)
         curr_layout.addWidget(self.bill_currency_combo)
-        curr_search_btn = QPushButton("🔍")
-        curr_search_btn.setFixedWidth(40)
+        curr_search_btn = QPushButton(STRINGS["sort_name_button"])
+        curr_search_btn.setIcon(get_icon("search"))
         curr_search_btn.clicked.connect(lambda: self.open_currency_search(self.bill_currency_combo))
         curr_layout.addWidget(curr_search_btn)
         add_bill_layout.addLayout(curr_layout, 2, 1)
@@ -5331,8 +5534,8 @@ class BillTrackerWindow(QMainWindow):
         
         cat_row = QHBoxLayout()
         cat_row.addWidget(self.bill_category_combo)
-        manage_cat_btn = QPushButton("⚙️")
-        manage_cat_btn.setFixedWidth(40)
+        manage_cat_btn = QPushButton(STRINGS["title_manage_categories"])
+        manage_cat_btn.setIcon(get_icon("settings"))
         manage_cat_btn.clicked.connect(self.manage_categories)
         cat_row.addWidget(manage_cat_btn)
         add_bill_layout.addLayout(cat_row, 3, 1)
@@ -5389,7 +5592,8 @@ class BillTrackerWindow(QMainWindow):
         currency_layout.addWidget(QLabel(STRINGS["summarize_in_label"]))
         self.summary_currency_combo = LazyCombo(items_provider=self.get_filtered_currency_list, pending_text=None)
         currency_layout.addWidget(self.summary_currency_combo)
-        summary_search_btn = QPushButton("🔍 " + STRINGS["sort_name_button"])
+        summary_search_btn = QPushButton(STRINGS["sort_name_button"])
+        summary_search_btn.setIcon(get_icon("search"))
         summary_search_btn.clicked.connect(lambda: self.open_currency_search(self.summary_currency_combo))
         currency_layout.addWidget(summary_search_btn)
         currency_layout.addStretch()
@@ -5562,6 +5766,12 @@ class BillTrackerWindow(QMainWindow):
             bill_curr = data.get('bill_currency')
             summary_curr = data.get('summary_currency')
             
+            # Block new combos if they exist
+            if hasattr(self, 'subscription_tab'):
+                self.subscription_tab.sub_currency_combo.blockSignals(True)
+            if hasattr(self, 'savings_tab'):
+                self.savings_tab.savings_currency_combo.blockSignals(True)
+            
             # Helper to match old format "$ (USD)" or new format "$ - US Dollar" to modern key
             def find_display_key(saved_str):
                 if not saved_str: return None
@@ -5611,6 +5821,18 @@ class BillTrackerWindow(QMainWindow):
             s_key = find_display_key(summary_curr)
             if s_key: self.summary_currency_combo.setCurrentText(s_key)
             
+            # v7.6.0: Subscription and Savings preferences
+            sub_curr = data.get('subscription_currency')
+            sav_curr = data.get('savings_currency')
+            
+            sub_key = find_display_key(sub_curr)
+            if sub_key and hasattr(self, 'subscription_tab'):
+                 self.subscription_tab.sub_currency_combo.setCurrentText(sub_key)
+                 
+            sav_key = find_display_key(sav_curr)
+            if sav_key and hasattr(self, 'savings_tab'):
+                 self.savings_tab.savings_currency_combo.setCurrentText(sav_key)
+            
         except Exception as e:
             print(f"DEBUG: restore exception: {e}", flush=True)
             pass
@@ -5619,6 +5841,10 @@ class BillTrackerWindow(QMainWindow):
             self.budget_currency_combo.blockSignals(False)
             self.bill_currency_combo.blockSignals(False)
             self.summary_currency_combo.blockSignals(False)
+            if hasattr(self, 'subscription_tab'):
+                self.subscription_tab.sub_currency_combo.blockSignals(False)
+            if hasattr(self, 'savings_tab'):
+                self.savings_tab.savings_currency_combo.blockSignals(False)
             # Ensure display is updated with restored values
             self.update_display()
     
@@ -5689,6 +5915,19 @@ class BillTrackerWindow(QMainWindow):
             logging.exception("Backup restore failed")
             QMessageBox.critical(self, STRINGS["title_error"], f"{STRINGS['msg_restore_error'].format(e)}")
     
+    def show_toast(self, message, duration=3000):
+        """Show a custom bottom-right toast notification."""
+        # Only create if not already showing one (or stack them in future improvements)
+        # For now, simplistic single toast
+        if hasattr(self, 'current_toast') and self.current_toast:
+            try:
+                self.current_toast.close()
+            except:
+                pass
+        
+        self.current_toast = ToastNotification(self, message, self.theme_manager)
+        self.current_toast.show_toast(duration)
+
     def save_data(self):
         data = {
             'budget': self.budget,
@@ -5697,6 +5936,8 @@ class BillTrackerWindow(QMainWindow):
             'budget_currency': self.budget_currency_combo.currentText(),
             'bill_currency': self.bill_currency_combo.currentText(),
             'summary_currency': self.summary_currency_combo.currentText(),
+            'subscription_currency': self.subscription_tab.sub_currency_combo.currentText() if hasattr(self, 'subscription_tab') else None,
+            'savings_currency': self.savings_tab.savings_currency_combo.currentText() if hasattr(self, 'savings_tab') else None,
             'custom_categories': self.custom_categories
         }
         self.data_manager.save_data(data, self.session_pin)
@@ -5805,9 +6046,9 @@ class BillTrackerWindow(QMainWindow):
                     self.unpaid_bills.append(new_bill)
                     
                     # Notify user
-                    self.tray_icon.showMessage(STRINGS["title_recurring_created"], 
-                                             STRINGS["msg_recurring_created"].format(bill['name'], new_bill['due_date']),
-                                             QSystemTrayIcon.MessageIcon.Information, 3000)
+                    self.show_toast(
+                        f"{STRINGS['title_recurring_created']}\n{STRINGS['msg_recurring_created'].format(bill['name'], new_bill['due_date'])}"
+                    )
                 except Exception as e:
                     logging.error(f"Recurrence error: {e}")
 
@@ -5818,7 +6059,7 @@ class BillTrackerWindow(QMainWindow):
             self.update_display()
 
     def open_contact(self):
-        webbrowser.open("https://guns.lol/grouvya")
+        webbrowser.open("https://t.me/ofinilet")
 
     def open_donate(self):
         webbrowser.open("https://revolut.me/grouvya")
@@ -5951,11 +6192,9 @@ class BillTrackerWindow(QMainWindow):
             self.toast.show()
             
             # Tray Fallback (Legacy)
-            self.tray_icon.showMessage(
-                STRINGS["notification_title"],
-                STRINGS["notification_msg"].format(count),
-                QSystemTrayIcon.MessageIcon.Information,
-                3000
+            self.show_toast(
+                f"{STRINGS['notification_title']}\n{STRINGS['notification_msg'].format(count)}",
+                5000
             )
             
             # Webhook Notification (Daily check)
@@ -6859,7 +7098,12 @@ class BillTrackerWindow(QMainWindow):
         if event.type() in [event.Type.MouseButtonPress, event.Type.KeyPress, 
                            event.Type.MouseMove, event.Type.Wheel]:
             self.reset_idle_timer()
-        return super().eventFilter(obj, event)
+        
+        # CRITICAL FIX: For global event filters on QApplication, 
+        # we must return False to allow the event to propagate to the target widget.
+        # Calling super().eventFilter() is wrong here because self is a QMainWindow,
+        # which expects (watched, event) for its own children, not arbitrary global objects.
+        return False
     
     def closeEvent(self, event):
         """Handle window close event with user choice."""
@@ -6888,10 +7132,8 @@ class BillTrackerWindow(QMainWindow):
             self.lock_app(silent=True)
             
         if self.tray_icon.isSystemTrayAvailable():
-            self.tray_icon.showMessage(
-                "BillTracker",
-                STRINGS.get("msg_running_background", "Running in background"),
-                QSystemTrayIcon.MessageIcon.Information,
+            self.show_toast(
+                f"BillTracker\n{STRINGS.get('msg_running_background', 'Running in background')}",
                 2000
             )
 

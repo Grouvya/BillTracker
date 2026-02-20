@@ -1,6 +1,11 @@
 # 💰 BillTracker - The Premium Financial Hub
 
-**Version 7.4.0** | Created with ❤️ by **Grouvya**
+**Version 7.6.0** | Created with ❤️ by **Grouvya**
+
+## What's New in 7.6.0
+- **Version Synchronization**: All components are now aligned to v7.6.0.
+- **UI "About" Section**: Updated documentation and release notes accessible directly within the app.
+- **Stability Improvements**: Minor bug fixes and performance optimizations.
 
 A modern, high-performance financial management ecosystem. Streamline your bills, automate your subscriptions, and crush your savings goals—all from a single, secure, and beautiful interface.
 
@@ -8,12 +13,18 @@ A modern, high-performance financial management ecosystem. Streamline your bills
 
 ## 🚀 Key Features
 
+### 🎨 Modern UI & Experience
+- **Vibrant Icons**: All-new colorful SVG icons with gradients for a premium look.
+- **Smart Inputs**: Improved "Add Bill" buttons with clear labels and natural sizing.
+- **Flatpak Support**: Now fully compatible with Linux Flatpak distribution.
+
 ### 📊 Dashboard & Analytics
 - **Unified 360° View**: Get instant clarity on your total budget, upcoming debts, and remaining funds.
 - **Dynamic Currency Support**: The app suggests your **Top 5 most used currencies** based on your habits, making transaction entry lightning-fast.
 - **Real-Time Exchange Rates**: Stay updated with the latest global conversion rates.
 
 ### 💸 Bill & Subscription Management
+- **Currency Summaries**: View your total monthly subscription burn rate in **your preferred currency** (e.g., see total in EUR even if bills are in USD/GBP).
 - **Smart Tracking**: Manage both one-time bills and recurring subscriptions with ease.
 - **Payment History**: Move bills to "Paid" with one click and track your spending over time.
 - **Advanced Search**: A powerful (Ctrl+F) engine to find any bill by name, category, date, or amount.

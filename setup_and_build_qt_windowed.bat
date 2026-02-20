@@ -22,7 +22,7 @@ if exist dist rmdir /s /q dist
 REM if exist Billtracker_qt.spec del /q Billtracker_qt.spec
 
 REM Build the exe (windowed, no console)
-pyinstaller --onefile --windowed --noupx --add-data "billtracker.ico;." --add-data "billtracker.png;." --add-data "tray.ico;." --add-data "README.md;." --add-data "README_GE.md;." --icon="billtracker.ico" Billtracker_qt.py
+python -m PyInstaller --onefile --windowed --noupx --add-data "billtracker.ico;." --add-data "billtracker.png;." --add-data "tray.ico;." --add-data "README.md;." --add-data "README_GE.md;." --add-data "icons;icons" --icon="billtracker.ico" Billtracker_qt.py
 
 REM Show result
 if exist dist\Billtracker_qt.exe (
