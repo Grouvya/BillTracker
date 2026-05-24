@@ -36,6 +36,28 @@
   <content_rating type="oars-1.1" />
   
   <releases>
+    <release version="7.6.0" date="2026-05-24">
+      <description>
+        <p>Version 7.6.0 (Flathub Release)</p>
+        <ul>
+          <li>Aligned all components and installers to v7.6.0.</li>
+          <li>Added new premium SVG icons with beautiful color gradients.</li>
+          <li>Updated internal documentation and program about section.</li>
+          <li>Optimized Flatpak build and added complete Linux Mint Software Manager compatibility.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="7.5.2" date="2026-02-19">
+      <description>
+        <p>Version 7.5.2 (Critical Fixes)</p>
+        <ul>
+          <li>Fixed unresponsive buttons in Notifications and Mini Mode.</li>
+          <li>Restored drag-and-drop functionality for widgets.</li>
+          <li>Fixed startup crash on Wayland.</li>
+          <li>Improved overall stability.</li>
+        </ul>
+      </description>
+    </release>
     <release version="7.4.0" date="2026-02-18">
       <description>
         <p>Version 7.4.0 (Security &amp; Stability)</p>

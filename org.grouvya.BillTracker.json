@@ -23,7 +23,8 @@
         "append-path": "/usr/lib/sdk/rust-stable/bin",
         "env": {
             "CARGO_HOME": "/run/build/billtracker/cargo"
-        }
+        },
+        "no-debuginfo": true
     },
     "modules": [
         "pypi-dependencies.json",
@@ -43,21 +44,8 @@
             ],
             "sources": [
                 {
-                    "type": "file",
-                    "path": "Billtracker_qt.py"
-                },
-                {
                     "type": "dir",
-                    "path": "icons",
-                    "dest": "icons"
-                },
-                {
-                    "type": "file",
-                    "path": "billtracker.png"
-                },
-                {
-                    "type": "file",
-                    "path": "billtracker_512.png"
+                    "path": "."
                 },
                 {
                     "type": "file",
@@ -66,14 +54,6 @@
                 {
                     "type": "file",
                     "path": "org.grouvya.BillTracker.metainfo.xml"
-                },
-                {
-                    "type": "file",
-                    "path": "README.md"
-                },
-                {
-                    "type": "file",
-                    "path": "README_GE.md"
                 }
             ]
         }

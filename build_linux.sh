@@ -3,7 +3,7 @@
 
 set -e  # Exit on error
 
-VERSION="7.1.15"
+VERSION=$(grep "__version__" Billtracker_qt.py | head -n1 | tr -d '"' | tr -d "'" | cut -d'=' -f2 | tr -d ' ')
 APP_NAME="BillTracker"
 BUILD_DIR="dist"
 APPDIR="${BUILD_DIR}/${APP_NAME}.AppDir"

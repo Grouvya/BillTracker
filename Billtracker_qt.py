@@ -908,7 +908,7 @@ def resource_path(relative_path):
         base_path = sys._MEIPASS
     except Exception:
         # Robust fallback: use script directory
-        base_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.path.abspath(".")
+        base_path = os.path.dirname(os.path.realpath(__file__)) if '__file__' in globals() else os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
 

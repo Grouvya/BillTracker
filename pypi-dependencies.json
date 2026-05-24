@@ -50,8 +50,8 @@
             "sources": [
                 {
                     "type": "file",
-                    "url": "https://files.pythonhosted.org/packages/a1/e8/02bb64f7150013d8af3ca622944e22f550beb312b6d5cf8760dc2896cce8/maturin-1.12.2-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl",
-                    "sha256": "134e895578258a693ba1d55b166c2ba96e9f51067e106b8a74d422432653d45b"
+                    "url": "https://files.pythonhosted.org/packages/a4/9c/70bfcb3780d48fd5da2e159de6d55383f3285f93cb79247dc031428fcd51/maturin-1.12.3-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl",
+                    "sha256": "287c8132a2b4fe0d1c3489388763e9b95efc030b29b5896782e7ecd43bfe0355"
                 }
             ]
         },
